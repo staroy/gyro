@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>simplemessage.qml</file>
+        <file>images/checkg.png</file>
+    </qresource>
+</RCC>
