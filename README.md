@@ -1,2 +1,2 @@
-# gyro
+# Gyro
 Gyro blockchain
