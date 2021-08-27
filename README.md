@@ -5,3 +5,5 @@ Based on the consensus algorithm "Proof of Gyro". Instead of spending energy to 
 EN : [gyro-PoG-en.pdf](https://github.com/staroy/gyro/blob/main/gyro-PoG-en.pdf)
 
 RU : [gyro-PoG-ru.pdf](https://github.com/staroy/gyro/blob/main/gyro-PoG-ru.pdf)
+
+Build : gyro-release.sh or gyro-debug.sh
