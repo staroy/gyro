@@ -16,7 +16,6 @@ include_directories(
   ${CMAKE_INSTALL_PREFIX}/include
   ${CMAKE_SOURCE_DIR}/src
   ${CMAKE_SOURCE_DIR}/external/easylogging++
-  /usr/include/lua5.3
 )
 
 link_directories(
@@ -38,9 +37,11 @@ set(zcc_src
 
 set(zcc_inc
   zyre.hpp
+  zyre_pack.hpp
   http.h
   wspp.hpp
   packjson.h
+  auth.h
   certs.h
 )
 
@@ -57,6 +58,7 @@ set(dcc_inc
 set(zcc_lib
   boost_system
   boost_program_options
+  leveldb
   zmq
   czmq
   zyre
@@ -79,8 +81,9 @@ set(zll_inc
 )
 
 set(zll_lib
+  ${DCC_NAME}
   ${ZCC_NAME}
-  lua5.3
+  lua
   leveldb
   cmsgpack
   boost_system
@@ -105,7 +108,7 @@ set(zl_lib
   ${DCC_NAME}
   ${ZCC_NAME}
   ${ZLL_NAME}
-  lua5.3
+  lua
   leveldb
   cmsgpack
   boost_system
@@ -113,10 +116,12 @@ set(zl_lib
   boost_program_options
   ssl
   crypto
+  sodium
   zmq
   czmq
   zyre
-  pthread)
+  pthread
+  dl)
 
 if("Release" STREQUAL ${CMAKE_BUILD_TYPE})
   add_library(${DCC_NAME} STATIC ${dcc_src} ${dcc_inc})
@@ -145,5 +150,11 @@ install(TARGETS ${ZL_NAME} ${DCC_NAME} ${ZCC_NAME} ${ZLL_NAME}
   RUNTIME DESTINATION   bin
   PUBLIC_HEADER DESTINATION include
   LIBRARY DESTINATION   lib
+  PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ
+      GROUP_EXECUTE GROUP_READ
   ARCHIVE DESTINATION lib
+)
+
+install(FILES ${zcc_inc} ${dcc_inc}
+  DESTINATION include/zyre
 )

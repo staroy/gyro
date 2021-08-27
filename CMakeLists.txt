@@ -874,6 +874,7 @@ elseif(Boost_FOUND)
                           "cmake -DOPENSSL_ROOT_DIR='/usr/include/openssl-1.0'")
   endif()
 endif()
+add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 
 include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 if(MINGW)
