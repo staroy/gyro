@@ -1537,7 +1537,8 @@ void wallet2::add_subaddress_account(const std::string& label)
 {
   uint32_t index_major = (uint32_t)get_num_subaddress_accounts();
   expand_subaddresses({index_major, 0});
-  m_subaddress_labels[index_major][0] = label;
+  if(!label.empty())
+    m_subaddress_labels[index_major][0] = label;
 }
 //----------------------------------------------------------------------------------------------------
 void wallet2::add_subaddress(uint32_t index_major, const std::string& label)
@@ -1545,7 +1546,8 @@ void wallet2::add_subaddress(uint32_t index_major, const std::string& label)
   THROW_WALLET_EXCEPTION_IF(index_major >= m_subaddress_labels.size(), error::account_index_outofbound);
   uint32_t index_minor = (uint32_t)get_num_subaddresses(index_major);
   expand_subaddresses({index_major, index_minor});
-  m_subaddress_labels[index_major][index_minor] = label;
+  if(!label.empty())
+    m_subaddress_labels[index_major][index_minor] = label;
 }
 //----------------------------------------------------------------------------------------------------
 bool wallet2::should_expand(const cryptonote::subaddress_index &index) const
@@ -1578,7 +1580,8 @@ void wallet2::expand_subaddresses(const cryptonote::subaddress_index& index)
          m_subaddresses[D] = index2;
       }
     }
-    m_subaddress_labels.resize(index.major + 1, {"Untitled account"});
+    std::string label = get_subaddress_as_str(index).substr(0,8) + "@" + GYRO_DOMAIN;
+    m_subaddress_labels.resize(index.major + 1, {label});
     m_subaddress_labels[index.major].resize(index.minor + 1);
     get_account_tags();
   }
@@ -1618,7 +1621,7 @@ void wallet2::set_subaddress_label(const cryptonote::subaddress_index& index, co
 {
   THROW_WALLET_EXCEPTION_IF(index.major >= m_subaddress_labels.size(), error::account_index_outofbound);
   THROW_WALLET_EXCEPTION_IF(index.minor >= m_subaddress_labels[index.major].size(), error::address_index_outofbound);
-  m_subaddress_labels[index.major][index.minor] = label;
+  m_subaddress_labels[index.major][index.minor] = label.empty() ? get_subaddress_as_str(index).substr(0,8) + "@" + GYRO_DOMAIN : label;
 }
 //----------------------------------------------------------------------------------------------------
 void wallet2::set_subaddress_lookahead(size_t major, size_t minor)
@@ -3268,7 +3271,7 @@ std::vector<tools::wallet2::address_book_row> wallet2::get_address_book()
   return m_address_book;
 }
 
-bool wallet2::add_address_book_row(const cryptonote::account_public_address &address, const crypto::hash8 *payment_id, const std::string &description, bool is_subaddress, const std::string& label, const crypto::secret_key& view_sec)
+bool wallet2::add_address_book_row(const cryptonote::account_public_address &address, const std::string& label, const crypto::hash8 *payment_id, const std::string &description, bool is_subaddress, const crypto::secret_key& view_sec)
 {
   wallet2::address_book_row a;
   a.m_address = address;
@@ -3276,7 +3279,7 @@ bool wallet2::add_address_book_row(const cryptonote::account_public_address &add
   a.m_payment_id = payment_id ? *payment_id : crypto::null_hash8;
   a.m_description = description;
   a.m_is_subaddress = is_subaddress;
-  a.m_label = label;
+  a.m_label = label.empty() ? cryptonote::get_account_address_as_str(m_nettype, is_subaddress, address).substr(0,8) + "@" + GYRO_DOMAIN: label;
   a.m_view_sec = view_sec;
 
   boost::unique_lock<boost::mutex> lock(m_address_book_mutex);
@@ -3287,7 +3290,7 @@ bool wallet2::add_address_book_row(const cryptonote::account_public_address &add
   return false;
 }
 
-bool wallet2::set_address_book_row(size_t row_id, const cryptonote::account_public_address &address, const crypto::hash8 *payment_id, const std::string &description, bool is_subaddress, const std::string& label, const crypto::secret_key& view_sec)
+bool wallet2::set_address_book_row(size_t row_id, const cryptonote::account_public_address &address, const std::string& label, const crypto::hash8 *payment_id, const std::string &description, bool is_subaddress, const crypto::secret_key& view_sec)
 {
   wallet2::address_book_row a;
   a.m_address = address;
@@ -3295,7 +3298,7 @@ bool wallet2::set_address_book_row(size_t row_id, const cryptonote::account_publ
   a.m_payment_id = payment_id ? *payment_id : crypto::null_hash8;
   a.m_description = description;
   a.m_is_subaddress = is_subaddress;
-  a.m_label = label;
+  a.m_label = label.empty() ? cryptonote::get_account_address_as_str(m_nettype, is_subaddress, address).substr(0,8) + "@" + GYRO_DOMAIN: label;
   a.m_view_sec = view_sec;
 
   boost::unique_lock<boost::mutex> lock(m_address_book_mutex);
@@ -4537,7 +4540,7 @@ void wallet2::setup_new_blockchain()
   generate_genesis(b);
   m_blockchain.push_back(get_block_hash(b));
   m_last_block_reward = cryptonote::get_outs_money_amount(b.spinner_tx);
-  add_subaddress_account(tr("Primary account"));
+  add_subaddress_account();
 }
 
 void wallet2::create_keys_file(const std::string &wallet_, bool watch_only, const epee::wipeable_string &password, bool create_address_file)
@@ -5130,7 +5133,7 @@ std::string wallet2::exchange_multisig_keys(const epee::wipeable_string &passwor
 
     m_subaddresses.clear();
     m_subaddress_labels.clear();
-    add_subaddress_account(tr("Primary account"));
+    add_subaddress_account();
 
     if (!m_wallet_file.empty())
       store();
@@ -5750,7 +5753,7 @@ void wallet2::load(const std::string& wallet_, const epee::wipeable_string& pass
   trim_hashchain();
 
   if (get_num_subaddress_accounts() == 0)
-    add_subaddress_account(tr("Primary account"));
+    add_subaddress_account();
 
   try
   {

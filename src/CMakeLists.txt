@@ -135,7 +135,6 @@ if(NOT IOS)
   add_subdirectory(daemonizer)
   add_subdirectory(daemon)
   add_subdirectory(blockchain_utilities)
-  #add_subdirectory(sms)
   add_subdirectory(zyre)
 endif()
 
@@ -149,3 +148,8 @@ endif()
 
 add_subdirectory(device)
 add_subdirectory(device_trezor)
+
+install(FILES
+  gyro.conf
+  DESTINATION var/lib/gyro
+)

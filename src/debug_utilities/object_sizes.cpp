@@ -110,12 +110,12 @@ int main(int argc, char* argv[])
   SL(tools::wallet2::unsigned_tx_set);
   SL(tools::wallet2::signed_tx_set);
 
-  SL(Monero::WalletImpl);
-  SL(Monero::AddressBookRow);
-  SL(Monero::TransactionInfoImpl);
-  SL(Monero::TransactionHistoryImpl);
-  SL(Monero::PendingTransactionImpl);
-  SL(Monero::UnsignedTransactionImpl);
+  SL(Gyro::WalletImpl);
+  SL(Gyro::AddressBookRow);
+  SL(Gyro::TransactionInfoImpl);
+  SL(Gyro::TransactionHistoryImpl);
+  SL(Gyro::PendingTransactionImpl);
+  SL(Gyro::UnsignedTransactionImpl);
 
   return 0;
 }

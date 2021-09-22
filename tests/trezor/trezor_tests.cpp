@@ -1836,26 +1836,26 @@ bool wallet_api_tests::generate(std::vector<test_event_entry>& events)
   init();
   test_setup(events);
   const std::string wallet_path = (m_wallet_dir / "wallet").string();
-  const auto api_net_type = m_network_type == TESTNET ? Monero::TESTNET : Monero::MAINNET;
+  const auto api_net_type = m_network_type == TESTNET ? Gyro::TESTNET : Gyro::MAINNET;
 
-  Monero::WalletManager *wmgr = Monero::WalletManagerFactory::getWalletManager();
-  std::unique_ptr<Monero::Wallet> w{wmgr->createWalletFromDevice(wallet_path, "", api_net_type, m_trezor_path, 1)};
+  Gyro::WalletManager *wmgr = Gyro::WalletManagerFactory::getWalletManager();
+  std::unique_ptr<Gyro::Wallet> w{wmgr->createWalletFromDevice(wallet_path, "", api_net_type, m_trezor_path, 1)};
   CHECK_AND_ASSERT_THROW_MES(w->init(daemon()->rpc_addr(), 0), "Wallet init fail");
   CHECK_AND_ASSERT_THROW_MES(w->refresh(), "Refresh fail");
   uint64_t balance = w->balance(0);
   MDEBUG("Balance: " << balance);
-  CHECK_AND_ASSERT_THROW_MES(w->status() == Monero::PendingTransaction::Status_Ok, "Status nok");
+  CHECK_AND_ASSERT_THROW_MES(w->status() == Gyro::PendingTransaction::Status_Ok, "Status nok");
 
   auto addr = get_address(m_eve_account);
   auto recepient_address = cryptonote::get_account_address_as_str(m_network_type, false, addr);
-  Monero::PendingTransaction * transaction = w->createTransaction(recepient_address,
+  Gyro::PendingTransaction * transaction = w->createTransaction(recepient_address,
                                                                   "",
                                                                   MK_COINS(10),
                                                                   TREZOR_TEST_MIXIN,
-                                                                  Monero::PendingTransaction::Priority_Medium,
+                                                                  Gyro::PendingTransaction::Priority_Medium,
                                                                   0,
                                                                   std::set<uint32_t>{});
-  CHECK_AND_ASSERT_THROW_MES(transaction->status() == Monero::PendingTransaction::Status_Ok, "Status nok");
+  CHECK_AND_ASSERT_THROW_MES(transaction->status() == Gyro::PendingTransaction::Status_Ok, "Status nok");
   w->refresh();
 
   CHECK_AND_ASSERT_THROW_MES(w->balance(0) == balance, "Err");

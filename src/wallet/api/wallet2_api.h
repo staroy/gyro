@@ -33,9 +33,11 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <list>
 #include <set>
 #include <ctime>
+#include <functional>
 #include <iostream>
 #include <stdexcept>
 
@@ -215,20 +217,23 @@ struct TransactionHistory
  */
 struct AddressBookRow {
 public:
-    AddressBookRow(std::size_t _rowId, const std::string &_address, const std::string &_paymentId, const std::string &_description):
+    AddressBookRow(std::size_t _rowId, const std::string &_address, const std::string &_label, const std::string &_paymentId, const std::string &_description):
         m_rowId(_rowId),
         m_address(_address),
+        m_label(_label),
         m_paymentId(_paymentId), 
         m_description(_description) {}
  
 private:
     std::size_t m_rowId;
     std::string m_address;
+    std::string m_label;
     std::string m_paymentId;
     std::string m_description;
 public:
     std::string extra;
     std::string getAddress() const {return m_address;} 
+    std::string getLabel() const {return m_label;} 
     std::string getDescription() const {return m_description;} 
     std::string getPaymentId() const {return m_paymentId;} 
     std::size_t getRowId() const {return m_rowId;}
@@ -248,7 +253,7 @@ struct AddressBook
     };
     virtual ~AddressBook() = 0;
     virtual std::vector<AddressBookRow*> getAll() const = 0;
-    virtual bool addRow(const std::string &dst_addr , const std::string &payment_id, const std::string &description) = 0;  
+    virtual bool addRow(const std::string &addr, const std::string &label , const std::string &payment_id, const std::string &description) = 0;  
     virtual bool deleteRow(std::size_t rowId) = 0;
     virtual void refresh() = 0;  
     virtual std::string errorString() const = 0;
@@ -472,6 +477,14 @@ struct Wallet
     virtual void hardForkInfo(uint8_t &version, uint64_t &earliest_height) const = 0;
     //! check if hard fork rules should be used
     virtual bool useForkRules(uint8_t version, int64_t early_blocks) const = 0;  
+    virtual void setSmsReceiveCallback(const std::function<
+            void(const std::string&,    /* from address */
+                 const std::string&,    /* from label */
+                 const std::string&,    /* to address */
+                 const std::string&,    /* to label */
+                 uint64_t,              /* n index */
+                 const std::string&)    /* sms text */
+                 >&) = 0;
     /*!
      * \brief integratedAddress - returns integrated address for current wallet address and given payment_id.
      *                            if passed "payment_id" param is an empty string or not-valid payment id string
@@ -512,6 +525,12 @@ struct Wallet
      * \return                        - public multisignature signer key or empty string if wallet is not multisig
      */
     virtual std::string publicMultisigSignerKey() const = 0;
+
+   /*!
+    * \brief secretSMSKey    - returns secret sms key
+    * \return                  - secret sms key
+    */
+    virtual std::string secretSMSKey() const = 0;
 
     /*!
      * \brief store - stores wallet to file.
@@ -964,6 +983,9 @@ struct Wallet
     virtual std::string getReserveProof(bool all, uint32_t account_index, uint64_t amount, const std::string &message) const = 0;
     virtual bool checkReserveProof(const std::string &address, const std::string &message, const std::string &signature, bool &good, uint64_t &total, uint64_t &spent) const = 0;
 
+    virtual std::map<uint64_t, std::string> getLockedTxid() const = 0;
+    virtual bool getSpinnerInfo(const std::string& txid, std::string &spinner_info, std::string& spinner_sec) const = 0;
+
     /*
      * \brief signMessage - sign a message with the spend private key
      * \param message - the message to sign (arbitrary byte data)
@@ -1291,7 +1313,7 @@ struct WalletManager
     virtual bool isSpinning() = 0;
 
     //! starts spinning with the set number of threads
-    virtual bool startSpinning(const std::string &address, const std::string &spinner_txid, uint32_t threads = 1, bool background_spinning = false, bool ignore_battery = true) = 0;
+    virtual bool startSpinning(const std::string &address, const std::string &spinner_info, const std::string &spinner_sec, uint32_t threads = 1, bool background_spinning = false, bool ignore_battery = true) = 0;
 
     //! stops spinning
     virtual bool stopSpinning() = 0;

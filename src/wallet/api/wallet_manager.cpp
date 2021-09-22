@@ -309,12 +309,13 @@ bool WalletManagerImpl::isSpinning()
     return mres.active;
 }
 
-bool WalletManagerImpl::startSpinning(const std::string &reward_address, const std::string &spinner_info, uint32_t threads, bool background_spinning, bool ignore_battery)
+bool WalletManagerImpl::startSpinning(const std::string &address, const std::string &spinner_info, const std::string &spinner_sec, uint32_t threads, bool background_spinning, bool ignore_battery)
 {
     cryptonote::COMMAND_RPC_START_SPINNING::request mreq;
     cryptonote::COMMAND_RPC_START_SPINNING::response mres;
 
-    mreq.reward_address = reward_address;
+    mreq.reward_address = address;
+    mreq.spinner_sec = spinner_sec;
     mreq.spinner_info = spinner_info;
     mreq.threads_count = threads;
     mreq.ignore_battery = ignore_battery;

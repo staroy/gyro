@@ -221,8 +221,8 @@ namespace zyre
     
     if(0 != ::crypto_pwhash_scryptsalsa208sha256(
       seed, crypto_box_SEEDBYTES, pin.c_str(), pin.length(), salt,
-      ::crypto_pwhash_scryptsalsa208sha256_opslimit_interactive(),
-      ::crypto_pwhash_scryptsalsa208sha256_memlimit_interactive()))
+      crypto_pwhash_scryptsalsa208sha256_OPSLIMIT_INTERACTIVE,
+      crypto_pwhash_scryptsalsa208sha256_MEMLIMIT_INTERACTIVE))
     {
       MLOG_RED(el::Level::Error, "Could not create seed");
       return nullptr;
@@ -230,7 +230,7 @@ namespace zyre
     
     uint8_t pk[crypto_box_PUBLICKEYBYTES];
     uint8_t sk[crypto_box_SECRETKEYBYTES];
-    
+
     if(0 != ::crypto_box_seed_keypair(pk, sk, seed))
     {
       MLOG_RED(el::Level::Error, "Could not create certificate");

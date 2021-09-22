@@ -53,6 +53,7 @@ namespace zyre { namespace wallet {
     , zyre_(ios_, w_ptr->get_address_as_str(), zsrv_)
     , me_(w_ptr->get_address_as_str())
     , rpc_(w_ptr)
+    , on_sms_receive_(nullptr)
   {
     w_ptr_->callback(this);
 
@@ -141,6 +142,7 @@ namespace zyre { namespace wallet {
         std::vector<bool>& sended,
         std::vector<uint64_t>& ts)
   {
+    std::string self = w_ptr_->get_address_as_str();
     std::string tmp = from + salt_;
     hash_t h_from;
     crypto::cn_fast_hash(tmp.data(), tmp.size(), h_from.u.h);
@@ -148,8 +150,8 @@ namespace zyre { namespace wallet {
     uint64_t c = 0;
     for(auto it = mm.find(n); c < cnt && it != mm.end(); it++, c++)
     {
-      uint64_t _n = 0; hash_t h_to; uint64_t f = 0;
-      it->first >> _n >> h_to >> f;
+      uint64_t _n = 0;
+      it->first >> _n;
 
       data_cipher_t cipher;
       it->second >> cipher;
@@ -172,10 +174,11 @@ namespace zyre { namespace wallet {
         o1.get().convert(info);
         sms.push_back(info.d);
         ts.push_back(info.ts);
-        if(f == MESSAGE_RECEIVED)
-          sended.push_back(false);
-        else
+        //if(f == MESSAGE_RECEIVED)
+        if(info.fa == self)
           sended.push_back(true);
+        else
+          sended.push_back(false);
       }
       catch (const std::exception& e)
       {
@@ -192,13 +195,17 @@ namespace zyre { namespace wallet {
         std::vector<std::string>& sms,
         std::vector<uint64_t>& ts)
   {
-    std::string tmp = w_ptr_->get_address_as_str() + salt_;
+    std::string self = w_ptr_->get_address_as_str();
+    std::string tmp = self + salt_;
     hash_t h_to;
     crypto::cn_fast_hash(tmp.data(), tmp.size(), h_to.u.h);
     lldb::cxx::db mm = data_[MESSAGE][h_to];
     uint64_t c = 0;
     for(auto it = mm.find(n); c < cnt && it != mm.end(); it++, c++)
     {
+      uint64_t _n = 0;
+      it->first >> _n;
+
       data_cipher_t cipher;
       it->second >> cipher;
 
@@ -253,14 +260,18 @@ namespace zyre { namespace wallet {
       it->second >> cipher;
 
       std::string buf;
-      try {
+      try
+      {
         zyre::wallet::decrypt(cipher.d, cipher.u.k, cipher.iv, sec_, buf);
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         MLOG_RED(el::Level::Warning, "error decrypt: " << e.what());
         return;
       }
 
-      try {
+      try
+      {
         msgpack::object_handle o1 = msgpack::unpack(buf.data(), buf.size());
         data_t info;
         o1.get().convert(info);
@@ -270,7 +281,9 @@ namespace zyre { namespace wallet {
           sended = false;
         else
           sended = true;
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         MLOG_RED(el::Level::Warning, "error deserialize: " << e.what());
         return;
       }
@@ -293,21 +306,27 @@ namespace zyre { namespace wallet {
       it->second >> cipher;
 
       std::string buf;
-      try {
+      try
+      {
         zyre::wallet::decrypt(cipher.d, cipher.u.k, cipher.iv, sec_, buf);
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         MLOG_RED(el::Level::Warning, "error decrypt: " << e.what());
         return;
       }
 
-      try {
+      try
+      {
         msgpack::object_handle o1 = msgpack::unpack(buf.data(), buf.size());
         data_t info;
         o1.get().convert(info);
         sms = info.d;
         from = info.f;
         ts = info.ts;
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         MLOG_RED(el::Level::Warning, "error deserialize: " << e.what());
         return;
       }
@@ -340,17 +359,20 @@ namespace zyre { namespace wallet {
         { info.t = a.m_label; break; }
     msgpack::pack(ss, info);
     zyre::wallet::data_cipher_t cipher;
-    try {
+    try
+    {
       zyre::wallet::encrypt(pub_, ss.str(), cipher.d, cipher.u.k, cipher.iv);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
       MLOG_RED(el::Level::Warning, "failed encript message for store, " << e.what());
       return uint64_t(-1);
     }
 
     uint64_t n = 0;
-    data_[CONTACT][h_to][MESSAGES_COUNTER] >> n; 
+    data_[CONTACT][h_to][MESSAGES_COUNTER] >> n; n++;
     data_[MESSAGE][h_to][n][h_from][MESSAGE_TOSEND] = cipher;
-    data_[CONTACT][h_to][MESSAGES_COUNTER] = n + 1;
+    data_[CONTACT][h_to][MESSAGES_COUNTER] = n;
     data_[CONTACT][h_to][MESSAGES_TIME] = time(nullptr);
 
     return n;
@@ -391,20 +413,26 @@ namespace zyre { namespace wallet {
     crypto::secret_key skey = w_ptr_->get_account().get_keys().m_view_secret_key;
     
     std::string m;
-    try {
+    try
+    {
       decrypt(cipher.d, cipher.u.k, cipher.iv, skey, m);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
       MLOG_RED(el::Level::Warning, "error decrypt: " << e.what());
       return;
     }
     
     data_sign_t sign;
 
-    try {
+    try
+    {
       size_t off = 0;
       msgpack::object_handle o1 = msgpack::unpack(m.data(), m.size(), off);
       o1.get().convert(sign);
-    } catch (const std::exception& e) {
+    }
+    catch (const std::exception& e)
+    {
       MLOG_RED(el::Level::Warning, "error deserialize: " << e.what());
       return;
     }
@@ -427,8 +455,9 @@ namespace zyre { namespace wallet {
     }
     
     std::string s_to = w_ptr_->get_subaddress_label({0,0});
+    std::string s_to_a = w_ptr_->get_address_as_str();
     
-    tmp = w_ptr_->get_address_as_str() + salt_;
+    tmp = s_to_a + salt_;
     hash_t h_to;
     crypto::cn_fast_hash(tmp.data(), tmp.size(), h_to.u.h);
 
@@ -445,42 +474,47 @@ namespace zyre { namespace wallet {
       if(row.m_address == info.address)
       {
         std::string s_from = row.m_label;
-        if(s_from != sign.n)
-        {
-          MLOG_RED(el::Level::Warning, "failed address of signed");
-          return;
-        }
+        //if(s_from != sign.n)
+        //{
+          //MLOG_RED(el::Level::Warning, "failed address of signed");
+          //return;
+        //}
         time_t tm = time(nullptr);
-        data_t m_info{ sign.d, s_to, w_ptr_->get_address_as_str(), sign.n, sign.a, tm };
+        data_t m_info{ sign.d, s_to, s_to_a, sign.n, sign.a, tm };
         std::stringstream ss;
         msgpack::pack(ss, m_info);
         data_cipher_t m_cipher;
         try
         {
           encrypt(pub_, ss.str(), m_cipher.d, m_cipher.u.k, m_cipher.iv);
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e)
+        {
           MLOG_RED(el::Level::Warning, "failed encript message for store");
           return;
         }
         uint64_t n = 0;
         if(!w_ptr_->watch_only())
         {
-          data_[CONTACT][h_from][MESSAGES_COUNTER] >> n;
+          data_[CONTACT][h_from][MESSAGES_COUNTER] >> n; n++;
           data_[MESSAGE][h_from][n][h_to][MESSAGE_RECEIVED] = m_cipher;
-          data_[CONTACT][h_from][MESSAGES_COUNTER] = n + 1;
+          data_[CONTACT][h_from][MESSAGES_COUNTER] = n;
           data_[CONTACT][h_from][MESSAGES_TIME] = tm;
         }
         else
         {
-          data_[CONTACT][h_to][MESSAGES_COUNTER] >> n;
+          data_[CONTACT][h_to][MESSAGES_COUNTER] >> n; n++;
           data_[MESSAGE][h_to][n][h_from][MESSAGE_RECEIVED] = m_cipher;
-          data_[CONTACT][h_to][MESSAGES_COUNTER] = n + 1;
+          data_[CONTACT][h_to][MESSAGES_COUNTER] = n;
           data_[CONTACT][h_to][MESSAGES_TIME] = tm;
         }
         MLOG_RED(el::Level::Warning, "receive message from: " << row.m_description);
         a_exist = true;
 
         zyre_.call(SHOUT, zyre_.groups(), "sms_put", me_, n, m_info);
+
+        if(on_sms_receive_)
+          on_sms_receive_(m_info.fa, m_info.f, m_info.ta, m_info.t, n, m_info.d);
 
         break;
       }
@@ -489,14 +523,16 @@ namespace zyre { namespace wallet {
     if (!a_exist)
     {
       time_t tm = time(nullptr);
-      data_t m_info{ sign.d, s_to, w_ptr_->get_address_as_str(), sign.n, sign.a, tm };
+      data_t m_info{ sign.d, s_to, s_to_a, sign.n, sign.a, tm };
       std::stringstream ss;
       msgpack::pack(ss, m_info);
       data_cipher_t m_cipher;
       try
       {
         encrypt(pub_, ss.str(), m_cipher.d, m_cipher.u.k, m_cipher.iv);
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         MLOG_RED(el::Level::Warning, "failed encript message for store: " << e.what());
         return;
       }
@@ -515,9 +551,11 @@ namespace zyre { namespace wallet {
         data_[CONTACT][h_to][MESSAGES_COUNTER] = n;
         data_[CONTACT][h_to][MESSAGES_TIME] = tm;
       }
-      w_ptr_->add_address_book_row(info.address, nullptr, sign.n, info.is_subaddress, sign.n);
+      w_ptr_->add_address_book_row(info.address, sign.n, nullptr, std::string(), info.is_subaddress);
       contact_t ci{sign.a, sign.n};
       zyre_.call(SHOUT, zyre_.groups(), "sms_put", me_, n, m_info);
+      if(on_sms_receive_)
+        on_sms_receive_(m_info.fa, m_info.f, m_info.ta, m_info.t, n, m_info.d);
       MLOG_RED(el::Level::Warning, "receive message from new address: " << sign.n);
     }
   }
@@ -527,19 +565,20 @@ namespace zyre { namespace wallet {
     auto address_book = w_ptr_->get_address_book();
     for (size_t i = 0; i < address_book.size(); ++i)
     {
-      std::string s_to;
+      std::string s_to, s_to_a;
       auto& row = address_book[i];
 
-      if(row.m_label.empty())
+      /*if(row.m_label.empty())
       {
         MLOG_RED(el::Level::Warning, "failed get label address");
         return false;
-      }
+      }*/
 
       s_to = row.m_label;
+      s_to_a = cryptonote::get_account_address_as_str(w_ptr_->nettype(), row.m_is_subaddress, row.m_address);
       
-      if(msg.t != s_to || msg.ta != cryptonote::get_account_address_as_str(w_ptr_->nettype(), row.m_is_subaddress, row.m_address))
-        return false;
+      if(/*msg.t != s_to ||*/ msg.ta != s_to_a)
+        continue;
 
       data_sign_t sign;
       sign.d = msg.d;
@@ -559,7 +598,9 @@ namespace zyre { namespace wallet {
       try
       {
         encrypt(row.m_address.m_view_public_key, ss1.str(), m_cipher.d, m_cipher.u.k, m_cipher.iv);
-      } catch (const std::exception& e) {
+      }
+      catch (const std::exception& e)
+      {
         MLOG_RED(el::Level::Warning, "failed encript message for store: " << e.what());
         return false;
       }
@@ -596,7 +637,9 @@ namespace zyre { namespace wallet {
           );
 
         for(auto& ptx : ptx_vector)
+        {
           w_ptr_->commit_tx(ptx);
+        }
       }
       catch(const std::exception& e)
       {
@@ -690,57 +733,5 @@ namespace zyre { namespace wallet {
   boost::optional<epee::wipeable_string> server::on_device_passphrase_request(bool & on_device) { if(callback_) return callback_->on_device_passphrase_request(on_device); on_device = true; return boost::none; }
   void server::on_device_progress(const hw::device_progress& event) { if(callback_) callback_->on_device_progress(event); };
   void server::on_pool_tx_removed(const crypto::hash &txid) { if(callback_) callback_->on_pool_tx_removed(txid); }
-
-  crypto::secret_key get_sms_secret_key(const tools::wallet2 *w_ptr)
-  {
-    const auto& acc = w_ptr->get_account();
-    auto& hwdev = acc.get_device();
-    return
-      hwdev.get_subaddress_secret_key(
-        hwdev.get_subaddress_secret_key(
-          acc.get_keys().m_view_secret_key, {1,1}), {1,1});
-  }
-
-  crypto::public_key get_sms_public_key(const crypto::secret_key& cipher_sec)
-  {
-     crypto::public_key cipher_pub;
-     crypto::secret_key_to_public_key(cipher_sec, cipher_pub);
-     return cipher_pub;
-  }
-  
-  std::string get_sms_salt(const crypto::secret_key& sec)
-  {
-     std::string tmp = "SMS-SALT-" + epee::string_tools::pod_to_hex(sec);
-     crypto::hash hash;
-     crypto::cn_fast_hash(tmp.data(), tmp.size(), hash);
-     return epee::string_tools::pod_to_hex(hash);
-  }
-
-  void encrypt(const crypto::public_key public_key, const std::string &plaintext, std::string &ciphertext, crypto::public_key &encryption_public_key, crypto::chacha_iv &iv)
-  {
-    crypto::secret_key encryption_secret_key;
-    crypto::generate_keys(encryption_public_key, encryption_secret_key);
-
-    crypto::key_derivation derivation;
-    bool success = crypto::generate_key_derivation(public_key, encryption_secret_key, derivation);
-    THROW_WALLET_EXCEPTION_IF(!success, tools::error::wallet_internal_error, "Failed to generate key derivation for message encryption");
-
-    crypto::chacha_key chacha_key;
-    crypto::generate_chacha_key(&derivation, sizeof(derivation), chacha_key, 1);
-    iv = crypto::rand<crypto::chacha_iv>();
-    ciphertext.resize(plaintext.size());
-    crypto::chacha20(plaintext.data(), plaintext.size(), chacha_key, iv, &ciphertext[0]);
-  }
-
-  void decrypt(const std::string &ciphertext, const crypto::public_key &encryption_public_key, const crypto::chacha_iv &iv, const crypto::secret_key &view_secret_key, std::string &plaintext)
-  {
-    crypto::key_derivation derivation;
-    bool success = crypto::generate_key_derivation(encryption_public_key, view_secret_key, derivation);
-    THROW_WALLET_EXCEPTION_IF(!success, tools::error::wallet_internal_error, "Failed to generate key derivation for message decryption");
-    crypto::chacha_key chacha_key;
-    crypto::generate_chacha_key(&derivation, sizeof(derivation), chacha_key, 1);
-    plaintext.resize(ciphertext.size());
-    crypto::chacha20(ciphertext.data(), ciphertext.size(), chacha_key, iv, &plaintext[0]);
-  }
 
 }}

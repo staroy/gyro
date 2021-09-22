@@ -1,5 +1,5 @@
-#ifndef __wallet_message_h__
-#define __wallet_message_h__
+#ifndef __wallet_zyre_h__
+#define __wallet_zyre_h__
 
 #include <string>
 #include <atomic>
@@ -16,6 +16,7 @@
 #include "zyre/db.hpp"
 #include "zyre/zyre.hpp"
 #include "wallet_zyre_rpc_proxy.h"
+#include "wallet_zyre_util.h"
 
 #define CONTACT 1 // prefix for contacts info
 #define MESSAGE 2 // prefix for heap messages
@@ -29,12 +30,6 @@
 #define MESSAGES_VIEWED 4 // postfix for contact viewed messages
 
 namespace zyre { namespace wallet {
-
-  crypto::secret_key get_sms_secret_key(const tools::wallet2 *w_ptr);
-  crypto::public_key get_sms_public_key(const crypto::secret_key& sec);
-  std::string get_sms_salt(const crypto::secret_key& sec);
-  void encrypt(const crypto::public_key public_key, const std::string &plaintext, std::string &ciphertext, crypto::public_key &encryption_public_key, crypto::chacha_iv &iv);
-  void decrypt(const std::string &ciphertext, const crypto::public_key &encryption_public_key, const crypto::chacha_iv &iv, const crypto::secret_key &view_secret_key, std::string &plaintext);
 
   typedef struct {
     union {
@@ -80,6 +75,14 @@ namespace zyre { namespace wallet {
   } contact_t;
 
   typedef std::vector<contact_t> contacts_t;
+  typedef std::function<
+    void(const std::string&,    /* from address */
+         const std::string&,    /* from label */
+         const std::string&,    /* to address */
+         const std::string&,    /* to label */
+         uint64_t,              /* n index */
+         const std::string&)    /* sms text */
+         > on_sms_receive_callback_t;
 
   class server : public tools::i_wallet2_callback
   {
@@ -97,6 +100,7 @@ namespace zyre { namespace wallet {
     rpc_proxy rpc_;
     std::map<std::string, func_r_t> meth_;
     std::thread thr_;
+    on_sms_receive_callback_t on_sms_receive_;
 
     bool send_to(const data_t& msg);
     void on_received(const std::string& data);
@@ -138,6 +142,8 @@ namespace zyre { namespace wallet {
     void sms_array(const std::string& from, const uint64_t& n, const uint64_t& c, zyre::resp_t r);
     void sms_get(const std::string& from, const uint64_t& n, zyre::resp_t r);
     void sms_put(const std::string& to, const std::string& sms, zyre::resp_t r);
+
+    void set_sms_receive_callback(const on_sms_receive_callback_t& f) { on_sms_receive_ = f; }
 
     // i_wallet2_callback
     virtual void on_new_block(uint64_t height, const cryptonote::block& block);

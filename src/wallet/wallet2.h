@@ -79,6 +79,8 @@
 #define THROW_ON_RPC_RESPONSE_ERROR_GENERIC(r, err, res, method) \
   THROW_ON_RPC_RESPONSE_ERROR(r, err, res, method, tools::error::wallet_generic_rpc_error, method, res.status)
 
+#define GYRO_DOMAIN "gyro.bit"
+
 class Serialization_portability_wallet_Test;
 class wallet_accessor_test;
 
@@ -818,11 +820,11 @@ private:
     std::string get_subaddress_as_str(const cryptonote::subaddress_index& index) const;
     std::string get_address_as_str() const { return get_subaddress_as_str({0, 0}); }
     std::string get_integrated_address_as_str(const crypto::hash8& payment_id) const;
-    void add_subaddress_account(const std::string& label);
+    void add_subaddress_account(const std::string& label = std::string());
     bool account_is_spendable(uint32_t index_major);
     size_t get_num_subaddress_accounts() const { return m_subaddress_labels.size(); }
     size_t get_num_subaddresses(uint32_t index_major) const { return index_major < m_subaddress_labels.size() ? m_subaddress_labels[index_major].size() : 0; }
-    void add_subaddress(uint32_t index_major, const std::string& label); // throws when index is out of bound
+    void add_subaddress(uint32_t index_major, const std::string& label = std::string()); // throws when index is out of bound
     void expand_subaddresses(const cryptonote::subaddress_index& index);
     void create_one_off_subaddress(const cryptonote::subaddress_index& index);
     std::string get_subaddress_label(const cryptonote::subaddress_index& index) const;
@@ -1167,8 +1169,8 @@ private:
     * \brief GUI Address book get/store
     */
     std::vector<address_book_row> get_address_book();
-    bool add_address_book_row(const cryptonote::account_public_address &address, const crypto::hash8 *payment_id, const std::string &description, bool is_subaddress, const std::string& label = std::string(), const crypto::secret_key& view_sec = crypto::null_skey);
-    bool set_address_book_row(size_t row_id, const cryptonote::account_public_address &address, const crypto::hash8 *payment_id, const std::string &description, bool is_subaddress, const std::string& label = std::string(), const crypto::secret_key& view_sec = crypto::null_skey);
+    bool add_address_book_row(const cryptonote::account_public_address &address, const std::string& label, const crypto::hash8 *payment_id, const std::string &description, bool is_subaddress, const crypto::secret_key& view_sec = crypto::null_skey);
+    bool set_address_book_row(size_t row_id, const cryptonote::account_public_address &address, const std::string& label, const crypto::hash8 *payment_id, const std::string &description, bool is_subaddress, const crypto::secret_key& view_sec = crypto::null_skey);
     bool delete_address_book_row(std::size_t row_id);
         
     uint64_t get_num_rct_outputs();

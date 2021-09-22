@@ -38,11 +38,15 @@
 #include "subaddress_account.h"
 #include "common_defines.h"
 #include "common/util.h"
+#include "cryptonote_basic/spinner_data.h"
+#include "wallet/wallet_zyre_util.h"
+
 
 #include "mnemonics/electrum-words.h"
 #include "mnemonics/english.h"
 #include <boost/format.hpp>
 #include <sstream>
+#include <map>
 #include <unordered_map>
 
 #ifdef WIN32
@@ -511,6 +515,10 @@ bool WalletImpl::create(const std::string &path, const std::string &password, co
         return false;
     }
 
+    m_zyre.reset(new zyre::wallet::server(m_wallet.get(), m_wallet->path()+".sms"));
+    m_zyre->start();
+    m_zyre->set_smskey(zyre::wallet::get_sms_secret_key(m_wallet.get()));
+
     return true;
 }
 
@@ -577,6 +585,7 @@ bool WalletImpl::createWatchOnly(const std::string &path, const std::string &pas
     }
     // Store wallet
     view_wallet->store();
+
     return true;
 }
 
@@ -682,6 +691,11 @@ bool WalletImpl::recoverFromKeysWithPassword(const std::string &path,
         setStatusError(string(tr("failed to generate new wallet: ")) + e.what());
         return false;
     }
+
+    m_zyre.reset(new zyre::wallet::server(m_wallet.get(), m_wallet->path()+".sms"));
+    m_zyre->start();
+    m_zyre->set_smskey(zyre::wallet::get_sms_secret_key(m_wallet.get()));
+
     return true;
 }
 
@@ -730,6 +744,11 @@ bool WalletImpl::open(const std::string &path, const std::string &password)
         LOG_ERROR("Error opening wallet: " << e.what());
         setStatusCritical(e.what());
     }
+
+    m_zyre.reset(new zyre::wallet::server(m_wallet.get(), m_wallet->path()+".sms"));
+    m_zyre->start();
+    m_zyre->set_smskey(zyre::wallet::get_sms_secret_key(m_wallet.get()));
+
     return status() == Status_Ok;
 }
 
@@ -771,6 +790,11 @@ bool WalletImpl::recover(const std::string &path, const std::string &password, c
     } catch (const std::exception &e) {
         setStatusCritical(e.what());
     }
+
+    m_zyre.reset(new zyre::wallet::server(m_wallet.get(), m_wallet->path()+".sms"));
+    m_zyre->start();
+    m_zyre->set_smskey(zyre::wallet::get_sms_secret_key(m_wallet.get()));
+
     return status() == Status_Ok;
 }
 
@@ -793,6 +817,10 @@ bool WalletImpl::close(bool store)
         m_wallet->stop();
         LOG_PRINT_L1("wallet::stop done");
         m_wallet->deinit();
+
+        if (m_zyre) m_zyre->stop();
+        m_zyre.reset();
+
         result = true;
         clearStatus();
     } catch (const std::exception &e) {
@@ -914,6 +942,11 @@ std::string WalletImpl::publicMultisigSignerKey() const
     } catch (const std::exception&) {
         return "";
     }
+}
+
+std::string WalletImpl::secretSMSKey() const
+{
+    return epee::string_tools::pod_to_hex(zyre::wallet::get_sms_secret_key(m_wallet.get()));
 }
 
 std::string WalletImpl::path() const
@@ -2006,6 +2039,87 @@ bool WalletImpl::checkReserveProof(const std::string &address, const std::string
     }
 }
 
+std::map<uint64_t, std::string> WalletImpl::getLockedTxid() const
+{
+  std::vector<tools::wallet2::transfer_details> transfers;
+  m_wallet->get_transfers(transfers);
+
+  std::map<uint64_t, std::string> txids;
+  for (const tools::wallet2::transfer_details& td : transfers)
+  {
+    if( td.m_subaddr_index.major == 0
+        && td.m_subaddr_index.minor == 0
+        && td.m_tx.unlock_time >= CRYPTONOTE_SPINNED_MONEY_LOCKED_BLOCKS)
+    {
+      txids[td.m_block_height] = epee::string_tools::pod_to_hex(td.m_txid);
+    }
+  }
+
+  return txids;
+}
+
+bool WalletImpl::getSpinnerInfo(const std::string& txid, std::string &spinner_info, std::string& spinner_sec_s) const
+{
+  std::vector<tools::wallet2::transfer_details> transfers;
+  m_wallet->get_transfers(transfers);
+
+  cryptonote::spinner_info info = AUTO_VAL_INIT(info);
+  info.adr = m_wallet->get_address();
+
+  if(!txid.empty())
+  {
+    if (!epee::string_tools::hex_to_pod(txid, info.proof.txid))
+    {
+      setStatusError(tr("failed parse txid from hex"));
+      return false;
+    }
+  }
+  else
+  {
+    uint64_t height = 0;
+    for (const tools::wallet2::transfer_details& td : transfers)
+    {
+      if( td.m_subaddr_index.major == 0
+          && td.m_subaddr_index.minor == 0
+          && td.m_tx.unlock_time >= CRYPTONOTE_SPINNED_MONEY_LOCKED_BLOCKS
+          && td.m_block_height > height)
+      {
+        height = td.m_block_height;
+        info.proof.txid = td.m_txid;
+      }
+    }
+  }
+
+  crypto::secret_key spinner_sec;
+  m_wallet->generate_spinner_keys(spinner_sec, info.pub, info.sig);
+  spinner_sec_s = epee::string_tools::pod_to_hex(spinner_sec);
+
+  std::string proof_s = m_wallet->get_tx_proof(info.proof.txid, m_wallet->get_address(), false, "");
+  if(proof_s.empty())
+  {
+    setStatusError(tr("failed to generate tx_proof"));
+    return false;
+  }
+  std::vector<crypto::public_key> vkey;
+  std::vector<crypto::signature> vsig;
+  m_wallet->decode_tx_proof(proof_s, vkey, vsig);
+  for(size_t n=0; n<vkey.size(); n++)
+    info.proof.pairs.push_back({vkey[n],vsig[n]});
+
+  info.prevuos_height = 0;
+  for (const tools::wallet2::transfer_details& td : transfers)
+  {
+    if(td.m_spinner_tx && info.prevuos_height < td.m_block_height)
+      info.prevuos_height = td.m_block_height;
+  }
+
+  std::string tmp;
+  ::serialization::dump_binary(info, tmp);
+  spinner_info = epee::string_tools::buff_to_hex_nodelimer(tmp);
+
+  return true;
+}
+
 std::string WalletImpl::signMessage(const std::string &message)
 {
   return m_wallet->sign(message);
@@ -2171,7 +2285,9 @@ void WalletImpl::doRefresh()
         if (m_wallet->light_wallet() || daemonSynced()) {
             if(rescan)
                 m_wallet->rescan_blockchain(false);
-            m_wallet->refresh(trustedDaemon());
+            uint64_t blocks_fetched = 0; bool received_money = false;
+            m_wallet->refresh(trustedDaemon(), 0, blocks_fetched, received_money, true);
+            if(m_zyre) m_zyre->send();
             if (!m_synchronized) {
                 m_synchronized = true;
             }
@@ -2314,6 +2430,18 @@ void WalletImpl::hardForkInfo(uint8_t &version, uint64_t &earliest_height) const
 bool WalletImpl::useForkRules(uint8_t version, int64_t early_blocks) const 
 {
     return m_wallet->use_fork_rules(version,early_blocks);
+}
+
+void WalletImpl::setSmsReceiveCallback(const std::function<
+            void(const std::string&,    /* from address */
+                 const std::string&,    /* from label */
+                 const std::string&,    /* to address */
+                 const std::string&,    /* to label */
+                 uint64_t,              /* n index */
+                 const std::string&)    /* sms text */
+                 >& f)
+{
+    m_zyre->set_sms_receive_callback(f);
 }
 
 bool WalletImpl::blackballOutputs(const std::vector<std::string> &outputs, bool add)

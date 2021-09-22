@@ -12,7 +12,6 @@
 
 uint64_t DURATION_TARGET =                    120;  // seconds
 uint64_t DURATION_TARGET_LAG =                5;  // seconds
-uint64_t LOCKED_BLOCKS_INCREEZE_INTERVAL =    100;  // blocks
 uint64_t SPINNER_MOMENT_OF_INERTIA =          5;
 uint64_t SPINNER_DAMPING_RATIO_DIVIDER =      2000;
 uint64_t SPINNER_ENERGY_COST_MULTIPLIER =     100000; // picocoins multiplier for picojoule
@@ -95,8 +94,6 @@ namespace config
     "DURATION_TARGET", "timeout blockchain", 120 };
   const command_line::arg_descriptor<uint64_t> arg_DURATION_TARGET_LAG = {
     "DURATION_TARGET_LAG", "timeout lag blockchain", 5 };
-  const command_line::arg_descriptor<uint64_t> arg_LOCKED_BLOCKS_INCREEZE_INTERVAL = {
-    "LOCKED_BLOCKS_INCREEZE_INTERVAL", "base spin correction interval", 100 };
   const command_line::arg_descriptor<uint64_t> arg_SPINNER_MOMENT_OF_INERTIA = {
     "SPINNER_MOMENT_OF_INERTIA", "spinner moment of inertia", 5 };
   const command_line::arg_descriptor<uint64_t> arg_SPINNER_DAMPING_RATIO_DIVIDER = {
@@ -216,7 +213,6 @@ namespace config
       command_line::add_arg(option_spec, arg_DURATION_TARGET_LAG);
       command_line::add_arg(option_spec, arg_START_AMOUNT_BLOCKS);
       command_line::add_arg(option_spec, arg_START_AMOUNT);
-      command_line::add_arg(option_spec, arg_LOCKED_BLOCKS_INCREEZE_INTERVAL);
       command_line::add_arg(option_spec, arg_SPINNER_MOMENT_OF_INERTIA);
       command_line::add_arg(option_spec, arg_SPINNER_DAMPING_RATIO_DIVIDER);
       command_line::add_arg(option_spec, arg_SPINNER_ENERGY_COST_MULTIPLIER);
@@ -277,7 +273,6 @@ namespace config
       DURATION_TARGET_LAG                                   = command_line::get_arg(vm, arg_DURATION_TARGET_LAG);
       START_AMOUNT_BLOCKS                                   = command_line::get_arg(vm, arg_START_AMOUNT_BLOCKS);
       START_AMOUNT                                          = command_line::get_arg(vm, arg_START_AMOUNT);
-      LOCKED_BLOCKS_INCREEZE_INTERVAL                       = command_line::get_arg(vm, arg_LOCKED_BLOCKS_INCREEZE_INTERVAL);
       SPINNER_MOMENT_OF_INERTIA                             = command_line::get_arg(vm, arg_SPINNER_MOMENT_OF_INERTIA);
       SPINNER_DAMPING_RATIO_DIVIDER                         = command_line::get_arg(vm, arg_SPINNER_DAMPING_RATIO_DIVIDER);
       SPINNER_ENERGY_COST_MULTIPLIER                        = command_line::get_arg(vm, arg_SPINNER_ENERGY_COST_MULTIPLIER);
@@ -353,7 +348,6 @@ namespace config
       crypto::cn_fast_hash(&DURATION_TARGET_LAG, sizeof(DURATION_TARGET_LAG), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT_BLOCKS, sizeof(START_AMOUNT_BLOCKS), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT, sizeof(START_AMOUNT), hash.data);
-      crypto::cn_fast_hash(&LOCKED_BLOCKS_INCREEZE_INTERVAL, sizeof(LOCKED_BLOCKS_INCREEZE_INTERVAL), hash.data);
       crypto::cn_fast_hash(&SPINNER_MOMENT_OF_INERTIA, sizeof(SPINNER_MOMENT_OF_INERTIA), hash.data);
       crypto::cn_fast_hash(&SPINNER_DAMPING_RATIO_DIVIDER, sizeof(SPINNER_DAMPING_RATIO_DIVIDER), hash.data);
       crypto::cn_fast_hash(&SPINNER_ENERGY_COST_MULTIPLIER, sizeof(SPINNER_ENERGY_COST_MULTIPLIER), hash.data);
@@ -390,7 +384,6 @@ namespace config
       crypto::cn_fast_hash(&DURATION_TARGET_LAG, sizeof(DURATION_TARGET_LAG), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT_BLOCKS, sizeof(START_AMOUNT_BLOCKS), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT, sizeof(START_AMOUNT), hash.data);
-      crypto::cn_fast_hash(&LOCKED_BLOCKS_INCREEZE_INTERVAL, sizeof(LOCKED_BLOCKS_INCREEZE_INTERVAL), hash.data);
       crypto::cn_fast_hash(&SPINNER_MOMENT_OF_INERTIA, sizeof(SPINNER_MOMENT_OF_INERTIA), hash.data);
       crypto::cn_fast_hash(&SPINNER_DAMPING_RATIO_DIVIDER, sizeof(SPINNER_DAMPING_RATIO_DIVIDER), hash.data);
       crypto::cn_fast_hash(&SPINNER_ENERGY_COST_MULTIPLIER, sizeof(SPINNER_ENERGY_COST_MULTIPLIER), hash.data);
@@ -426,7 +419,6 @@ namespace config
       crypto::cn_fast_hash(&DURATION_TARGET_LAG, sizeof(DURATION_TARGET_LAG), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT_BLOCKS, sizeof(START_AMOUNT_BLOCKS), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT, sizeof(START_AMOUNT), hash.data);
-      crypto::cn_fast_hash(&LOCKED_BLOCKS_INCREEZE_INTERVAL, sizeof(LOCKED_BLOCKS_INCREEZE_INTERVAL), hash.data);
       crypto::cn_fast_hash(&SPINNER_MOMENT_OF_INERTIA, sizeof(SPINNER_MOMENT_OF_INERTIA), hash.data);
       crypto::cn_fast_hash(&SPINNER_DAMPING_RATIO_DIVIDER, sizeof(SPINNER_DAMPING_RATIO_DIVIDER), hash.data);
       crypto::cn_fast_hash(&SPINNER_ENERGY_COST_MULTIPLIER, sizeof(SPINNER_ENERGY_COST_MULTIPLIER), hash.data);

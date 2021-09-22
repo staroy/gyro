@@ -33,6 +33,7 @@
 
 #include "wallet/api/wallet2_api.h"
 #include "wallet/wallet2.h"
+#include "wallet/wallet_zyre.h"
 
 #include <string>
 #include <boost/thread/mutex.hpp>
@@ -98,6 +99,7 @@ public:
     std::string secretSpendKey() const override;
     std::string publicSpendKey() const override;
     std::string publicMultisigSignerKey() const override;
+    std::string secretSMSKey() const override;
     std::string path() const override;
     bool store(const std::string &path) override;
     std::string filename() const override;
@@ -131,6 +133,14 @@ public:
     NetworkType nettype() const override {return static_cast<NetworkType>(m_wallet->nettype());}
     void hardForkInfo(uint8_t &version, uint64_t &earliest_height) const override;
     bool useForkRules(uint8_t version, int64_t early_blocks) const override;
+    void setSmsReceiveCallback(const std::function<
+            void(const std::string&,    /* from address */
+                 const std::string&,    /* from label */
+                 const std::string&,    /* to address */
+                 const std::string&,    /* to label */
+                 uint64_t,              /* n index */
+                 const std::string&)    /* sms text */
+                 >&) override;
 
     void addSubaddressAccount(const std::string& label) override;
     size_t numSubaddressAccounts() const override;
@@ -189,6 +199,8 @@ public:
     virtual bool checkSpendProof(const std::string &txid, const std::string &message, const std::string &signature, bool &good) const override;
     virtual std::string getReserveProof(bool all, uint32_t account_index, uint64_t amount, const std::string &message) const override;
     virtual bool checkReserveProof(const std::string &address, const std::string &message, const std::string &signature, bool &good, uint64_t &total, uint64_t &spent) const override;
+    virtual std::map<uint64_t, std::string> getLockedTxid() const override;
+    virtual bool getSpinnerInfo(const std::string& txid, std::string &spinner_info, std::string& spinner_sec) const override;
     virtual std::string signMessage(const std::string &message) override;
     virtual bool verifySignedMessage(const std::string &message, const std::string &address, const std::string &signature) const override;
     virtual std::string signMultisigParticipant(const std::string &message) const override;
@@ -237,6 +249,8 @@ private:
     friend class SubaddressAccountImpl;
 
     std::unique_ptr<tools::wallet2> m_wallet;
+    std::unique_ptr<zyre::wallet::server> m_zyre;
+
     mutable boost::mutex m_statusMutex;
     mutable int m_status;
     mutable std::string m_errorString;

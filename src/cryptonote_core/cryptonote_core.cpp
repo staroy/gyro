@@ -1333,9 +1333,9 @@ namespace cryptonote
     return m_blockchain_storage.create_block_template(b, prev_block, reward_adr, spin_key, spin_data, gyr, height, expected_reward, ex_nonce);
   }
   //-----------------------------------------------------------------------------------------------
-  bool core::get_spinner_data(const spinner_info& info, spinner_data& data, uint64_t& time_to)
+  bool core::get_spinner_data(const spinner_info& info, std::vector<uint64_t>& history, spinner_data& data, uint64_t& time_to)
   {
-    return m_blockchain_storage.get_spinner_data(info, data, time_to);
+    return m_blockchain_storage.get_spinner_data(info, history, data, time_to);
   }
   //-----------------------------------------------------------------------------------------------
   bool core::find_blockchain_supplement(const std::list<crypto::hash>& qblock_ids, bool clip_pruned, NOTIFY_RESPONSE_CHAIN_ENTRY::request& resp) const

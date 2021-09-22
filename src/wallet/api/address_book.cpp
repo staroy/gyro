@@ -44,12 +44,12 @@ AddressBook::~AddressBook() {}
 AddressBookImpl::AddressBookImpl(WalletImpl *wallet)
     : m_wallet(wallet), m_errorCode(Status_Ok) {}
 
-bool AddressBookImpl::addRow(const std::string &dst_addr , const std::string &payment_id_str, const std::string &description)
+bool AddressBookImpl::addRow(const std::string &addr, const std::string &label, const std::string &payment_id_str, const std::string &description)
 {
   clearStatus();
   
   cryptonote::address_parse_info info;
-  if(!cryptonote::get_account_address_from_str(info, m_wallet->m_wallet->nettype(), dst_addr)) {
+  if(!cryptonote::get_account_address_from_str(info, m_wallet->m_wallet->nettype(), addr)) {
     m_errorString = tr("Invalid destination address");
     m_errorCode = Invalid_Address;
     return false;
@@ -62,7 +62,7 @@ bool AddressBookImpl::addRow(const std::string &dst_addr , const std::string &pa
     return false;
   }
 
-  bool r =  m_wallet->m_wallet->add_address_book_row(info.address, info.has_payment_id ? &info.payment_id : NULL,description,info.is_subaddress);
+  bool r =  m_wallet->m_wallet->add_address_book_row(info.address, label, info.has_payment_id ? &info.payment_id : NULL, description, info.is_subaddress);
   if (r)
     refresh();
   else
@@ -86,7 +86,7 @@ void AddressBookImpl::refresh()
       address = cryptonote::get_account_integrated_address_as_str(m_wallet->m_wallet->nettype(), row->m_address, row->m_payment_id);
     else
       address = get_account_address_as_str(m_wallet->m_wallet->nettype(), row->m_is_subaddress, row->m_address);
-    AddressBookRow * abr = new AddressBookRow(i, address, "", row->m_description);
+    AddressBookRow * abr = new AddressBookRow(i, address, row->m_label, "", row->m_description);
     m_rows.push_back(abr);
   }
   

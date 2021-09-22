@@ -9291,9 +9291,9 @@ bool simple_wallet::account(const std::vector<std::string> &args/* = std::vector
   if (command == "new")
   {
     // create a new account and switch to it
-    std::string label = boost::join(local_args, " ");
-    if (label.empty())
-      label = tr("(Untitled account)");
+    std::string label;
+    if(local_args.size() > 0)
+      label = boost::join(local_args, "_") + "@" + GYRO_DOMAIN;
     m_wallet->add_subaddress_account(label);
     m_current_subaddress_account = m_wallet->get_num_subaddress_accounts() - 1;
     // update_prompt();
@@ -9366,7 +9366,9 @@ bool simple_wallet::account(const std::vector<std::string> &args/* = std::vector
       return true;
     }
     local_args.erase(local_args.begin());
-    std::string label = boost::join(local_args, " ");
+    std::string label;
+    if(local_args.size() > 0)
+      label = boost::join(local_args, "_") + "@" + GYRO_DOMAIN;
     try
     {
       m_wallet->set_subaddress_label({index_major, 0}, label);
@@ -9547,9 +9549,7 @@ bool simple_wallet::print_address(const std::vector<std::string> &args/* = std::
     local_args.erase(local_args.begin());
     std::string label;
     if (local_args.size() > 0)
-      label = boost::join(local_args, " ");
-    if (label.empty())
-      label = tr("(Untitled address)");
+      label = boost::join(local_args, "_") + "@" + GYRO_DOMAIN;
     m_wallet->add_subaddress(m_current_subaddress_account, label);
     print_address_sub(m_wallet->get_num_subaddresses(m_current_subaddress_account) - 1);
     m_wallet->device_show_address(m_current_subaddress_account, m_wallet->get_num_subaddresses(m_current_subaddress_account) - 1, boost::none);
@@ -9605,7 +9605,9 @@ bool simple_wallet::print_address(const std::vector<std::string> &args/* = std::
     }
     local_args.erase(local_args.begin());
     local_args.erase(local_args.begin());
-    std::string label = boost::join(local_args, " ");
+    std::string label;
+    if(local_args.size() > 0)
+      label = boost::join(local_args, "_") + "@" + GYRO_DOMAIN;
     m_wallet->set_subaddress_label({m_current_subaddress_account, index}, label);
     print_address_sub(index);
   }
@@ -9756,7 +9758,8 @@ bool simple_wallet::address_book(const std::vector<std::string> &args/* = std::v
       return true;
     }
     size_t description_start = 2;
-    std::string description, label; crypto::secret_key view_sec = crypto::null_skey;
+    std::string description, label;
+    crypto::secret_key view_sec = crypto::null_skey;
     for (size_t i = description_start; i < args.size(); ++i)
     {
       if (i > description_start)
@@ -9768,7 +9771,7 @@ bool simple_wallet::address_book(const std::vector<std::string> &args/* = std::v
       else if(w.length()==64)
         epee::string_tools::hex_to_pod(w, view_sec);
     }
-    m_wallet->add_address_book_row(info.address, info.has_payment_id ? &info.payment_id : NULL, description, info.is_subaddress, label, view_sec);
+    m_wallet->add_address_book_row(info.address, label, info.has_payment_id ? &info.payment_id : NULL, description, info.is_subaddress, view_sec);
     zyre::wallet::contact_t c_info {args[1], label};
     m_zyre->zyre().call(SHOUT, m_zyre->zyre().groups(), "add_addr", m_wallet->get_address_as_str(), c_info);
   }
@@ -11542,99 +11545,69 @@ bool simple_wallet::sms(const std::vector<std::string> &args)
     return true;
   }
 
-  bool without_address = false;
-  bool without_pos = true;
-
-  int32_t n = 1; int32_t c = 10;
-  if(epee::string_tools::get_xtype_from_string(n, args[0]))
-  {
-    without_address = true;
-    without_pos = false;
-    if(args.size() > 1)
-      epee::string_tools::get_xtype_from_string(c, args[1]);
-  }
-  else if(args.size() > 1)
-  {
-    if(epee::string_tools::get_xtype_from_string(n, args[1]))
-      without_pos = false;
-    if(args.size() > 2)
-      epee::string_tools::get_xtype_from_string(c, args[2]);
-  }
-
   std::string adr, label;
 
-  if(!without_address)
+  size_t sz = args[0].size();
+  for(const auto& A : m_wallet->get_address_book())
   {
-    size_t sz = args[0].size();
-    for(const auto& A : m_wallet->get_address_book())
-    {
-      std::string a = cryptonote::get_account_address_as_str(
-          m_wallet->nettype(), A.m_is_subaddress, A.m_address);
+    std::string a = cryptonote::get_account_address_as_str(
+        m_wallet->nettype(), A.m_is_subaddress, A.m_address);
 
-      if(args[0] == A.m_label.substr(0, sz) || args[0] == a.substr(0, sz))
-      {
-        label = A.m_label; adr = a; break;
-      }
+    if(args[0] == A.m_label.substr(0, sz) || args[0] == a.substr(0, sz))
+    {
+      label = A.m_label; adr = a; break;
     }
   }
 
-  if(without_pos)
-  {
-    n -= 1;
-  }
-  else
-  {
-    uint64_t C = m_zyre->_sms_count(adr);
-    if(n < 0)
-    {
-      if(C > uint64_t(-n))
-        n += int32_t(C);
-      else
-        n = 0;
-    }
-    if(c < 1)
-      c = 10;
-  }
+  int32_t n = 1;
+  int32_t c = 10;
 
-  if(!without_pos || args.size() < 2)
+  if(args.size() > 1)
   {
-    if(without_address)
+    if(epee::string_tools::get_xtype_from_string(n, args[1]))
     {
-      std::vector<std::string> sms; std::vector<std::string> from; std::vector<uint64_t> ts;
-      m_zyre->_sms_array(uint64_t(n), uint64_t(c), from, sms, ts);
-      
-      for(size_t s=0; s<sms.size(); s++)
-      {
-        message_writer() << "< " << sms[s];
-      }
+      if(args.size() > 2)
+        epee::string_tools::get_xtype_from_string(c, args[2]);
     }
     else
     {
-      std::vector<std::string> sms; std::vector<bool> sended; std::vector<uint64_t> ts;
-      m_zyre->_sms_array(adr, uint64_t(n), uint64_t(c), sms, sended, ts);
-      
-      for(size_t s=0; s<sms.size(); s++)
+      // send sms
+      std::string sms;
+      for (size_t i = 1; i < args.size(); ++i)
       {
-        if(sended[s])
-          message_writer(console_color_yellow, false) << "> " << sms[s];
-        else
-          message_writer() << "< " << sms[s];
+        if (i > 1)
+          sms += " ";
+        const std::string& w = args[i];
+        sms += w;
       }
+
+      uint64_t n = m_zyre->_sms_put(adr, sms);
+      message_writer(console_color_yellow, false) << "SMS #" << n << " to " << label << "(" << adr.substr(0, 6) << ") stored.";
+
+      return true;
     }
   }
-  else
+
+  if(n < 0)
   {
-    std::string sms;
-    for (size_t i = 1; i < args.size(); ++i)
-    {
-      if (i > 1)
-        sms += " ";
-      const std::string& w = args[i];
-      sms += w;
-    }
-    uint64_t n = m_zyre->_sms_put(adr, sms);
-    message_writer(console_color_yellow, false) << "SMS #" << (n + 1) << " to " << label << "(" << adr.substr(0, 6) << ") stored.";
+    n += m_zyre->_sms_count(adr) + 1;
+    if(n < 1) n = 1;
   }
+
+  std::vector<std::string> sms;
+  std::vector<bool> sended;
+  std::vector<uint64_t> ts;
+
+  m_zyre->_sms_array(adr, uint64_t(n), uint64_t(c), sms, sended, ts);
+
+  for(size_t s=0; s<sms.size(); s++)
+  {
+    if(sended[s])
+      message_writer(console_color_yellow, false) << "> " << sms[s];
+    else
+      message_writer() << "< " << sms[s];
+  }
+
   return true;
 }
 

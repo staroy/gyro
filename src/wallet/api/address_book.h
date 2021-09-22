@@ -44,7 +44,7 @@ public:
     // Fetches addresses from Wallet2
     void refresh() override;
     std::vector<AddressBookRow*> getAll() const override;
-    bool addRow(const std::string &dst_addr , const std::string &payment_id, const std::string &description) override;
+    bool addRow(const std::string &addr, const std::string &label, const std::string &payment_id, const std::string &description) override;
     bool deleteRow(std::size_t rowId) override;
      
     // Error codes. See AddressBook:ErrorCode enum in wallet2_api.h

@@ -1482,12 +1482,6 @@ bool Blockchain::calc_spinner_transaction_locked(const spinner_info& nfo, uint64
       return false;
     }
 
-    if(tx_height + LOCKED_BLOCKS_INCREEZE_INTERVAL < height)
-    {
-      MERROR_VER("Error unlock time less then LOCKED_BLOCKS_INCREEZE_INTERVAL");
-      return false;
-    }
-
     tx_height = height;
 
     if(tx.unlock_time != CRYPTONOTE_SPINNED_MONEY_LOCKED_BLOCKS)
@@ -1516,7 +1510,7 @@ bool Blockchain::calc_spinner_transaction_locked(const spinner_info& nfo, uint64
   return true;
 }
 //------------------------------------------------------------------
-bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, uint64_t& time_to)
+bool Blockchain::get_spinner_data(const spinner_info& info, std::vector<uint64_t>& history, spinner_data& res, uint64_t& time_to)
 {
   uint64_t height = m_db->height() - 1;
   if(height < START_AMOUNT_BLOCKS)
@@ -1535,6 +1529,7 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
   uint64_t spin_timestamp = 0;
   uint64_t prev_timestamp = 0;
   uint64_t medium_interval = DURATION_TARGET;
+  uint64_t prevuos_height = history.size() > 0 ? history.back() : info.prevuos_height;
 
   if(height > START_AMOUNT_BLOCKS)
   {
@@ -1552,25 +1547,47 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
       MERROR_VER("Error parse prevuos spinner data");
       return false;
     }
+
     prev_timestamp = b.timestamp;
   }
 
-  if(info.prevuos_height > START_AMOUNT_BLOCKS)
+  if(prevuos_height > START_AMOUNT_BLOCKS)
   {
-    block b = m_db->get_block_from_height(info.prevuos_height);
+    bool history_popback = false;
 
-    spin_timestamp =  b.timestamp;
+    for(;;)
+    {
+      block b = m_db->get_block_from_height(prevuos_height);
 
-    tx_extra_spin_data ex_data;
-    if(!get_spin_data_from_extra(b.spinner_tx.extra, ex_data))
-    {
-      MERROR_VER("The spinner transaction in prevuos block has not tx_proof");
-      return false;
-    }
-    if(!::serialization::parse_binary(ex_data.data, prev_spin))
-    {
-      MERROR_VER("Error parse prevuos spinner data");
-      return false;
+      tx_extra_spin_data ex_data;
+      if(!get_spin_data_from_extra(b.spinner_tx.extra, ex_data))
+      {
+        MERROR_VER("The spinner transaction in prevuos block has not tx_proof");
+        return false;
+      }
+      if(!::serialization::parse_binary(ex_data.data, prev_spin))
+      {
+        MERROR_VER("Error parse prevuos spinner data");
+        return false;
+      }
+
+      if(prev_spin.nfo.adr == info.adr)
+      {
+        spin_timestamp =  b.timestamp;
+        break;
+      }
+
+      if(history.size() > 0)
+      {
+        history.pop_back();
+        prevuos_height = history.back();
+        history_popback = true;
+      }
+      else
+      {
+        MERROR_VER("Error get prevuos spinner data");
+        return false;
+      }
     }
 
     if(prev_spin.nfo.prevuos_height > START_AMOUNT_BLOCKS)
@@ -1579,8 +1596,8 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
     }
     else
     {
-      if(height > info.prevuos_height)
-        medium_interval = (prev_timestamp - spin_timestamp) / (height - info.prevuos_height);
+      if(height > prevuos_height)
+        medium_interval = (prev_timestamp - spin_timestamp) / (height - prevuos_height);
       else
         medium_interval = prev_data.medium_interval;
     }
@@ -1591,13 +1608,33 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
       return false;
     }
 
-    time_to = spin_timestamp + prev_spin.interval;
-
-    if(time_to > now)
+    if(history_popback)
+      time_to = now + 2;
+    else
+      time_to = spin_timestamp + prev_spin.interval;
+  }
+  else
+  {
+    uint64_t proof_height = 0;
+    try
     {
-      // MWARNING("Failed time period, must wait");
+      proof_height = m_db->get_tx_block_height(info.proof.txid);
+    }
+    catch (const std::exception& e)
+    {
+      MERROR_VER(e.what());
       return false;
     }
+
+    spin_timestamp =  m_db->get_block_timestamp(proof_height);
+
+    time_to = spin_timestamp + medium_interval;
+  }
+
+  if(time_to > now)
+  {
+    // MWARNING("Failed time period, must wait");
+    return false;
   }
 
   if(!calc_spinner_transaction_locked(info, res_data.locked))
@@ -1607,6 +1644,7 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
   }
 
   res_data.nfo = info;
+  res_data.nfo.prevuos_height = prevuos_height;
 
   // E and dE and dampA in picoJoule
   boost::multiprecision::uint128_t picoX = 1000000000000;
@@ -1630,29 +1668,37 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
   //MWARNING("spin:" << res_data.spin);
 
   if(prev_data.medium_locked > 0)
-    res_data.medium_locked = ((boost::multiprecision::uint128_t(prev_data.medium_locked) * (prev_data.approximately_count + SPINNER_COUNT_PRECISION) + res_data.locked * SPINNER_COUNT_PRECISION) / (prev_data.approximately_count + 2 * SPINNER_COUNT_PRECISION)).convert_to<uint64_t>();
+    res_data.medium_locked = ((boost::multiprecision::uint128_t(prev_data.medium_locked) * prev_data.approximately_count
+      + res_data.locked * SPINNER_COUNT_PRECISION)
+      / (prev_data.approximately_count + SPINNER_COUNT_PRECISION)).convert_to<uint64_t>();
   else
     res_data.medium_locked = res_data.locked;
 
   
   if(prev_data.medium_spin > 0)
-    res_data.medium_spin = ((boost::multiprecision::uint128_t(prev_data.medium_spin) * (prev_data.approximately_count + SPINNER_COUNT_PRECISION) + res_data.spin * SPINNER_COUNT_PRECISION) / (prev_data.approximately_count + 2 * SPINNER_COUNT_PRECISION)).convert_to<uint64_t>();
+    res_data.medium_spin = ((boost::multiprecision::uint128_t(prev_data.medium_spin) * prev_data.approximately_count
+      + res_data.spin * SPINNER_COUNT_PRECISION)
+      / (prev_data.approximately_count + SPINNER_COUNT_PRECISION)).convert_to<uint64_t>();
   else
     res_data.medium_spin = res_data.spin;
 
-  if(height == START_AMOUNT_BLOCKS)
-    res_data.medium_interval = medium_interval;
+  if(prevuos_height > START_AMOUNT_BLOCKS)
+  {
+    uint64_t n = 1 + 2 * SPINNER_COUNT_PRECISION / prev_data.approximately_count;
+    res_data.medium_interval = (prev_data.medium_interval * n +  medium_interval) / (n + 1);
+  }
   else
-    res_data.medium_interval = (prev_data.medium_interval + medium_interval) / 2;
+    res_data.medium_interval = medium_interval;
 
-  res_data.approximately_count = prev_data.approximately_count;
+  if(height > START_AMOUNT_BLOCKS)
+    res_data.approximately_count = prev_data.approximately_count;
+  else
+    res_data.approximately_count = SPINNER_COUNT_PRECISION;
 
   if(res_data.medium_interval < DURATION_TARGET)
     res_data.approximately_count++;
-  else if(res_data.medium_interval > DURATION_TARGET && res_data.approximately_count > 0)
+  else if(res_data.medium_interval > DURATION_TARGET && res_data.approximately_count > 1)
     res_data.approximately_count--;
-
-  //MWARNING("approximately_count:" << res_data.approximately_count);
 
   uint64_t duration_target = DURATION_TARGET;
 
@@ -1662,20 +1708,33 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
   if(height > bound_height)
     duration_target = (boost::multiprecision::uint128_t(DURATION_TARGET) * (height - bound_height + SPINNER_SPIN_BLOCK_WINDOW) / SPINNER_SPIN_BLOCK_WINDOW).convert_to<uint64_t>();
 
-  //MWARNING("spin_block_window:" << spin_block_window);
+  res_data.interval =
 
-  uint64_t interval = (
-    (boost::multiprecision::uint128_t(res_data.medium_spin)
-      * (res_data.approximately_count + SPINNER_COUNT_PRECISION) * duration_target / res_data.spin) / SPINNER_COUNT_PRECISION
-  ).convert_to<uint64_t>();
-
-  res_data.interval = interval * duration_target / res_data.medium_interval;
+    (
+      (
+        (
+          boost::multiprecision::uint128_t(res_data.approximately_count + 1)
+                      * duration_target
+  
+          * res_data.medium_spin / res_data.spin
+        )
+        * duration_target / res_data.medium_interval
+      )
+      / SPINNER_COUNT_PRECISION
+  
+    ).convert_to<uint64_t>();
 
   res = res_data;
 
-  //MWARNING("interval:" << interval);
-  //MWARNING("res_data.medium_interval:" << res_data.medium_interval);
-  //MWARNING("res_data.interval:" << res_data.interval);
+  /*MWARNING("interval = " << res_data.interval << "\n"
+<<"(\n"
+<<"  (approximately_count=" << res_data.approximately_count << " + 1) * duration_target=" << duration_target << "\n"
+<<"       * res_data.medium_spin=" << res_data.medium_spin << " / res_data.spin=" << res_data.spin << "\n"
+<<"     )\n"
+<<"       * duration_target=" << duration_target << " / res_data.medium_interval=" << res_data.medium_interval << "\n"
+<<"   )\n"
+<<"/ SPINNER_COUNT_PRECISION=" << SPINNER_COUNT_PRECISION << "\n"
+<<")");*/
 
   return true;
 }
@@ -4679,7 +4738,8 @@ leave:
 
     uint64_t time_to;
     spinner_data calc = AUTO_VAL_INIT(calc);
-    if(!get_spinner_data(data.nfo, calc, time_to))
+    std::vector<uint64_t> hist;
+    if(!get_spinner_data(data.nfo, hist, calc, time_to))
     {
       MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.");
       bvc.m_verifivation_failed = true;

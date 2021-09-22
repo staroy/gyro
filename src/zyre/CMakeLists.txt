@@ -59,6 +59,9 @@ set(zcc_lib
   boost_system
   boost_program_options
   leveldb
+  ssl
+  crypto
+  sodium
   zmq
   czmq
   zyre
@@ -128,7 +131,7 @@ if("Release" STREQUAL ${CMAKE_BUILD_TYPE})
   target_link_libraries(${DCC_NAME} ${dcc_lib})
   add_library(${ZCC_NAME} STATIC ${zcc_src} ${zcc_inc})
   target_link_libraries(${ZCC_NAME} ${zcc_lib})
-  add_library(${ZLL_NAME} STATIC  ${zll_src} ${zll_inc})
+  add_library(${ZLL_NAME} STATIC ${zll_src} ${zll_inc})
   target_link_libraries(${ZLL_NAME} ${zll_lib})
   add_executable(${ZL_NAME} ${zl_src} ${zl_inc})
   target_link_libraries(${ZL_NAME} ${zl_lib})

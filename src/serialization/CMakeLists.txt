@@ -53,3 +53,4 @@ target_link_libraries(serialization
 add_dependencies(serialization
   version)
 
+install(TARGETS serialization DESTINATION lib)

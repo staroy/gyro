@@ -52,6 +52,7 @@ set(wallet_sources
   wallet_rpc_server_api.cpp
   wallet_zyre_rpc_proxy.cpp
   wallet_zyre.cpp
+  wallet_zyre_util.cpp
 )
 
 set(wallet_private_headers
@@ -70,6 +71,7 @@ set(wallet_private_headers
   wallet_rpc_helpers.h
   wallet_zyre_rpc_proxy.h
   wallet_zyre.h
+  wallet_zyre_util.h
 )
 
 monero_private_headers(wallet

@@ -89,7 +89,7 @@ public:
     double spinningHashRate() override;
     uint64_t blockTarget() override;
     bool isSpinning() override;
-    bool startSpinning(const std::string &reward_address, const std::string &spinner_info, uint32_t threads = 1, bool background_spinning = false, bool ignore_battery = true) override;
+    bool startSpinning(const std::string &reward_address, const std::string &spinner_info, const std::string &spinner_sec, uint32_t threads = 1, bool background_spinning = false, bool ignore_battery = true) override;
     bool stopSpinning() override;
     std::string resolveOpenAlias(const std::string &address, bool &dnssec_valid) const override;
 

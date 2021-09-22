@@ -2633,7 +2633,7 @@ namespace tools
       return false;
     }
 
-    if (!m_wallet->add_address_book_row(info.address, info.has_payment_id ? &info.payment_id : NULL, req.description, info.is_subaddress, req.label, viewsec))
+    if (!m_wallet->add_address_book_row(info.address, req.label, info.has_payment_id ? &info.payment_id : NULL, req.description, info.is_subaddress, viewsec))
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = "Failed to add address book entry";
@@ -2709,7 +2709,7 @@ namespace tools
       }
     }
 
-    if (!m_wallet->set_address_book_row(req.index, entry.m_address, req.set_address && entry.m_has_payment_id ? &entry.m_payment_id : NULL, entry.m_description, entry.m_is_subaddress))
+    if (!m_wallet->set_address_book_row(req.index, entry.m_address, entry.m_label, req.set_address && entry.m_has_payment_id ? &entry.m_payment_id : NULL, entry.m_description, entry.m_is_subaddress))
     {
       er.code = WALLET_RPC_ERROR_CODE_UNKNOWN_ERROR;
       er.message = "Failed to edit address book entry";

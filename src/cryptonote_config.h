@@ -203,7 +203,6 @@ extern std::string CRYPTONOTE_NAME;
 
 extern uint64_t START_AMOUNT_BLOCKS;            // 100
 extern uint64_t START_AMOUNT;
-extern uint64_t LOCKED_BLOCKS_INCREEZE_INTERVAL; // 100  // blocks
 
 extern uint64_t SPINNER_MOMENT_OF_INERTIA; //   5
 extern uint64_t SPINNER_DAMPING_RATIO_DIVIDER; // 2000 (result in picoJoule)

@@ -32,6 +32,7 @@
 #include <numeric>
 #include <boost/interprocess/detail/atomic.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/format.hpp>
 #include "misc_language.h"
 #include "syncobj.h"
 #include "cryptonote_basic_impl.h"
@@ -642,14 +643,16 @@ namespace cryptonote
     uint64_t height = 0;
     block b;
     slow_hash_allocate_state();
-    spinner_info info = m_spinner_info;
+    spinner_info spinner_info = m_spinner_info;
     spinner_data spinner_data = AUTO_VAL_INIT(spinner_data);
+    std::vector<uint64_t> spinner_history;
+    spinner_history.push_back(m_spinner_info.prevuos_height);
     uint64_t next_tm = time(nullptr);
     if(m_height > START_AMOUNT_BLOCKS)
     {
       while(!m_stop)
       {
-        if(m_phandler->get_spinner_data(info, spinner_data, next_tm))
+        if(m_phandler->get_spinner_data(spinner_info, spinner_history, spinner_data, next_tm))
           break;
         misc_utils::sleep_no_w(100);
       }
@@ -692,8 +695,11 @@ namespace cryptonote
 
       if(m_height > START_AMOUNT_BLOCKS)
       {
-        if(!m_phandler->get_spinner_data(info, spinner_data, next_tm))
+        if(!m_phandler->get_spinner_data(spinner_info, spinner_history, spinner_data, next_tm))
         {
+          uint64_t now = uint64_t(time(nullptr));
+          if(next_tm >= now && (next_tm - now) > 2)
+            next_tm = now + 2;
           continue;
         }
       }
@@ -714,24 +720,25 @@ namespace cryptonote
       ++m_config.current_extra_message_index;
       MGINFO_GREEN("Found block " << get_block_hash(b)
         << "\nheight: " << height
-        << "\naddress: " << cryptonote::get_account_address_as_str(get_nettype(), false, info.adr).substr(0,8)
-        << "\napproximately_count: " << (spinner_data.approximately_count / SPINNER_COUNT_PRECISION + 1) << "(+" << (spinner_data.approximately_count % SPINNER_COUNT_PRECISION) << "/" << SPINNER_COUNT_PRECISION << ")"
-        << "\nmedium_locked: " << spinner_data.medium_locked
+        << "\naddress: " << cryptonote::get_account_address_as_str(get_nettype(), false, spinner_info.adr).substr(0,8)
+        << "\napproximately_count: " << boost::format("%.2f") % (double(spinner_data.approximately_count) / SPINNER_COUNT_PRECISION)
+        << "\nmedium_locked: " << cryptonote::print_money(spinner_data.medium_locked)
         << "\nspin: " << spinner_data.spin
         << "\nmedium_spin: " << spinner_data.medium_spin
         << "\ninterval: " << spinner_data.interval
         << "\nmedium_interval: " << spinner_data.medium_interval);
       cryptonote::block_verification_context bvc;
-      if(!m_phandler->handle_block_found(b, bvc) || !bvc.m_added_to_main_chain)
-      {
-        --m_config.current_extra_message_index;
-      }
-      else
+      if(m_phandler->handle_block_found(b, bvc) && bvc.m_added_to_main_chain)
       {
         //success update, lets update config
         if (!m_config_folder_path.empty())
           epee::serialization::store_t_to_json_file(m_config, m_config_folder_path + "/" + SPINNER_CONFIG_FILE_NAME);
-        info.prevuos_height = height;
+        spinner_info.prevuos_height = height;
+        spinner_history.push_back(height);
+      }
+      else
+      {
+        --m_config.current_extra_message_index;
       }
 
       nonce+=m_threads_total;
