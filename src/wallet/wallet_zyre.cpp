@@ -615,7 +615,7 @@ namespace zyre { namespace wallet {
       cryptonote::set_sms_to_extra(extra, em);
 
       cryptonote::tx_destination_entry de;
-      de.amount = COIN;
+      de.amount = CRYPTONOTE_MESSAGE_TX_AMOUNT;
       de.addr = row.m_address;
       de.is_integrated = false;
       de.is_subaddress = false;
@@ -718,7 +718,7 @@ namespace zyre { namespace wallet {
 
   void server::on_new_block(uint64_t height, const cryptonote::block& block) { if(callback_) callback_->on_new_block(height, block); }
   void server::on_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index, bool is_change, uint64_t unlock_time) { if(callback_) callback_->on_money_received(height, txid, tx, amount, subaddr_index, is_change, unlock_time); }
-  void server::on_sms_received(uint64_t /*height*/, const crypto::hash &/*txid*/, const cryptonote::transaction& /*tx*/, uint32_t layer, const std::string& data, uint64_t /*amount*/, const cryptonote::subaddress_index& /*subaddr_index*/) { if(layer == SMS_LAYER) on_received(data); }
+  void server::on_sms_received(uint64_t /*height*/, const crypto::hash &/*txid*/, const cryptonote::transaction& /*tx*/, uint32_t layer, const std::string& data, uint64_t amount, const cryptonote::subaddress_index& /*subaddr_index*/) { if(layer == SMS_LAYER && amount >= CRYPTONOTE_MESSAGE_TX_AMOUNT) on_received(data); }
   void server::on_unconfirmed_money_received(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& tx, uint64_t amount, const cryptonote::subaddress_index& subaddr_index) { if(callback_) callback_->on_unconfirmed_money_received(height, txid, tx, amount, subaddr_index); }
   void server::on_money_spent(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& in_tx, uint64_t amount, const cryptonote::transaction& spend_tx, const cryptonote::subaddress_index& subaddr_index) { if(callback_) callback_->on_money_spent(height, txid, in_tx, amount, spend_tx, subaddr_index); }
   void server::on_skip_transaction(uint64_t height, const crypto::hash &txid, const cryptonote::transaction& tx) { if(callback_) callback_->on_skip_transaction(height, txid, tx); }

@@ -12,6 +12,7 @@
 
 uint64_t DURATION_TARGET =                    120;  // seconds
 uint64_t DURATION_TARGET_LAG =                5;  // seconds
+uint64_t SPINNER_AMOUNT_MIN_LOCK =            COIN_DEFAULT;
 uint64_t SPINNER_MOMENT_OF_INERTIA =          5;
 uint64_t SPINNER_DAMPING_RATIO_DIVIDER =      2000;
 uint64_t SPINNER_ENERGY_COST_MULTIPLIER =     100000; // picocoins multiplier for picojoule
@@ -22,6 +23,7 @@ uint64_t SPINNER_COUNT_PRECISION =            10;
 uint64_t CRYPTONOTE_MEMPOOL_TX_LIVETIME =     (86400*3); //seconds, three days
 uint64_t CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME = 604800; //seconds, one week
 uint64_t CRYPTONOTE_MESSAGE_TX_LIVETIME =     86400; //seconds, 1 day
+uint64_t CRYPTONOTE_MESSAGE_TX_AMOUNT =       COIN_DEFAULT;
 bool CRYPTONOTE_DANDELIONPP_ENABLE =          true;
 bool CRYPTONOTE_DANDELIONPP_ENABLE_OPT =      true;
 uint64_t TX_EXTRA_SMS_MAX_COUNT =             4096;
@@ -94,6 +96,8 @@ namespace config
     "DURATION_TARGET", "timeout blockchain", 120 };
   const command_line::arg_descriptor<uint64_t> arg_DURATION_TARGET_LAG = {
     "DURATION_TARGET_LAG", "timeout lag blockchain", 5 };
+  const command_line::arg_descriptor<uint64_t> arg_SPINNER_AMOUNT_MIN_LOCK = {
+    "SPINNER_AMOUNT_MIN_LOCK", "spinner amount min lock", COIN_DEFAULT };
   const command_line::arg_descriptor<uint64_t> arg_SPINNER_MOMENT_OF_INERTIA = {
     "SPINNER_MOMENT_OF_INERTIA", "spinner moment of inertia", 5 };
   const command_line::arg_descriptor<uint64_t> arg_SPINNER_DAMPING_RATIO_DIVIDER = {
@@ -114,6 +118,8 @@ namespace config
     "CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME", "memory pool from alt block livetime", 604800 };
   const command_line::arg_descriptor<uint64_t> arg_CRYPTONOTE_MESSAGE_TX_LIVETIME = {
     "CRYPTONOTE_MESSAGE_TX_LIVETIME", "memory pool message tx livetime", 86400 };
+  const command_line::arg_descriptor<uint64_t> arg_CRYPTONOTE_MESSAGE_TX_AMOUNT = {
+    "CRYPTONOTE_MESSAGE_TX_AMOUNT", "memory pool message tx amount", COIN_DEFAULT };
   const command_line::arg_descriptor<uint64_t> arg_CRYPTONOTE_DANDELIONPP_ENABLE = {
     "CRYPTONOTE_DANDELIONPP_ENABLE", "cryptonote dandelionpp enable", true };
   const command_line::arg_descriptor<uint64_t> arg_CRYPTONOTE_DANDELIONPP_ENABLE_OPT = {
@@ -213,6 +219,7 @@ namespace config
       command_line::add_arg(option_spec, arg_DURATION_TARGET_LAG);
       command_line::add_arg(option_spec, arg_START_AMOUNT_BLOCKS);
       command_line::add_arg(option_spec, arg_START_AMOUNT);
+      command_line::add_arg(option_spec, arg_SPINNER_AMOUNT_MIN_LOCK);
       command_line::add_arg(option_spec, arg_SPINNER_MOMENT_OF_INERTIA);
       command_line::add_arg(option_spec, arg_SPINNER_DAMPING_RATIO_DIVIDER);
       command_line::add_arg(option_spec, arg_SPINNER_ENERGY_COST_MULTIPLIER);
@@ -223,6 +230,7 @@ namespace config
       command_line::add_arg(option_spec, arg_CRYPTONOTE_MEMPOOL_TX_LIVETIME);
       command_line::add_arg(option_spec, arg_CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME);
       command_line::add_arg(option_spec, arg_CRYPTONOTE_MESSAGE_TX_LIVETIME);
+      command_line::add_arg(option_spec, arg_CRYPTONOTE_MESSAGE_TX_AMOUNT);
       command_line::add_arg(option_spec, arg_CRYPTONOTE_DANDELIONPP_ENABLE);
       command_line::add_arg(option_spec, arg_CRYPTONOTE_DANDELIONPP_ENABLE_OPT);
       command_line::add_arg(option_spec, arg_TX_EXTRA_SMS_MAX_COUNT);
@@ -273,6 +281,7 @@ namespace config
       DURATION_TARGET_LAG                                   = command_line::get_arg(vm, arg_DURATION_TARGET_LAG);
       START_AMOUNT_BLOCKS                                   = command_line::get_arg(vm, arg_START_AMOUNT_BLOCKS);
       START_AMOUNT                                          = command_line::get_arg(vm, arg_START_AMOUNT);
+      SPINNER_AMOUNT_MIN_LOCK                               = command_line::get_arg(vm, arg_SPINNER_AMOUNT_MIN_LOCK);
       SPINNER_MOMENT_OF_INERTIA                             = command_line::get_arg(vm, arg_SPINNER_MOMENT_OF_INERTIA);
       SPINNER_DAMPING_RATIO_DIVIDER                         = command_line::get_arg(vm, arg_SPINNER_DAMPING_RATIO_DIVIDER);
       SPINNER_ENERGY_COST_MULTIPLIER                        = command_line::get_arg(vm, arg_SPINNER_ENERGY_COST_MULTIPLIER);
@@ -283,6 +292,7 @@ namespace config
       CRYPTONOTE_MEMPOOL_TX_LIVETIME                        = command_line::get_arg(vm, arg_CRYPTONOTE_MEMPOOL_TX_LIVETIME);
       CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME         = command_line::get_arg(vm, arg_CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME);
       CRYPTONOTE_MESSAGE_TX_LIVETIME                        = command_line::get_arg(vm, arg_CRYPTONOTE_MESSAGE_TX_LIVETIME);
+      CRYPTONOTE_MESSAGE_TX_AMOUNT                          = command_line::get_arg(vm, arg_CRYPTONOTE_MESSAGE_TX_AMOUNT);
       CRYPTONOTE_DANDELIONPP_ENABLE                         = command_line::get_arg(vm, arg_CRYPTONOTE_DANDELIONPP_ENABLE);
       CRYPTONOTE_DANDELIONPP_ENABLE_OPT                     = command_line::get_arg(vm, arg_CRYPTONOTE_DANDELIONPP_ENABLE_OPT);
       TX_EXTRA_SMS_MAX_COUNT                                = command_line::get_arg(vm, arg_TX_EXTRA_SMS_MAX_COUNT);
@@ -348,6 +358,7 @@ namespace config
       crypto::cn_fast_hash(&DURATION_TARGET_LAG, sizeof(DURATION_TARGET_LAG), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT_BLOCKS, sizeof(START_AMOUNT_BLOCKS), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT, sizeof(START_AMOUNT), hash.data);
+      crypto::cn_fast_hash(&SPINNER_AMOUNT_MIN_LOCK, sizeof(SPINNER_AMOUNT_MIN_LOCK), hash.data);
       crypto::cn_fast_hash(&SPINNER_MOMENT_OF_INERTIA, sizeof(SPINNER_MOMENT_OF_INERTIA), hash.data);
       crypto::cn_fast_hash(&SPINNER_DAMPING_RATIO_DIVIDER, sizeof(SPINNER_DAMPING_RATIO_DIVIDER), hash.data);
       crypto::cn_fast_hash(&SPINNER_ENERGY_COST_MULTIPLIER, sizeof(SPINNER_ENERGY_COST_MULTIPLIER), hash.data);
@@ -358,6 +369,7 @@ namespace config
       crypto::cn_fast_hash(&CRYPTONOTE_MEMPOOL_TX_LIVETIME, sizeof(CRYPTONOTE_MEMPOOL_TX_LIVETIME), hash.data);
       crypto::cn_fast_hash(&CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME, sizeof(CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME), hash.data);
       crypto::cn_fast_hash(&CRYPTONOTE_MESSAGE_TX_LIVETIME, sizeof(CRYPTONOTE_MESSAGE_TX_LIVETIME), hash.data);
+      crypto::cn_fast_hash(&CRYPTONOTE_MESSAGE_TX_AMOUNT, sizeof(CRYPTONOTE_MESSAGE_TX_AMOUNT), hash.data);
       crypto::cn_fast_hash(&CRYPTONOTE_DANDELIONPP_ENABLE, sizeof(CRYPTONOTE_DANDELIONPP_ENABLE), hash.data);
       crypto::cn_fast_hash(&TX_EXTRA_SMS_MAX_COUNT, sizeof(TX_EXTRA_SMS_MAX_COUNT), hash.data);
       crypto::cn_fast_hash(&GYRO_DONATION_ADDR, sizeof(GYRO_DONATION_ADDR), hash.data);
@@ -384,6 +396,7 @@ namespace config
       crypto::cn_fast_hash(&DURATION_TARGET_LAG, sizeof(DURATION_TARGET_LAG), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT_BLOCKS, sizeof(START_AMOUNT_BLOCKS), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT, sizeof(START_AMOUNT), hash.data);
+      crypto::cn_fast_hash(&SPINNER_AMOUNT_MIN_LOCK, sizeof(SPINNER_AMOUNT_MIN_LOCK), hash.data);
       crypto::cn_fast_hash(&SPINNER_MOMENT_OF_INERTIA, sizeof(SPINNER_MOMENT_OF_INERTIA), hash.data);
       crypto::cn_fast_hash(&SPINNER_DAMPING_RATIO_DIVIDER, sizeof(SPINNER_DAMPING_RATIO_DIVIDER), hash.data);
       crypto::cn_fast_hash(&SPINNER_ENERGY_COST_MULTIPLIER, sizeof(SPINNER_ENERGY_COST_MULTIPLIER), hash.data);
@@ -394,6 +407,7 @@ namespace config
       crypto::cn_fast_hash(&CRYPTONOTE_MEMPOOL_TX_LIVETIME, sizeof(CRYPTONOTE_MEMPOOL_TX_LIVETIME), hash.data);
       crypto::cn_fast_hash(&CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME, sizeof(CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME), hash.data);
       crypto::cn_fast_hash(&CRYPTONOTE_MESSAGE_TX_LIVETIME, sizeof(CRYPTONOTE_MESSAGE_TX_LIVETIME), hash.data);
+      crypto::cn_fast_hash(&CRYPTONOTE_MESSAGE_TX_AMOUNT, sizeof(CRYPTONOTE_MESSAGE_TX_AMOUNT), hash.data);
       crypto::cn_fast_hash(&CRYPTONOTE_DANDELIONPP_ENABLE, sizeof(CRYPTONOTE_DANDELIONPP_ENABLE), hash.data);
       crypto::cn_fast_hash(&TX_EXTRA_SMS_MAX_COUNT, sizeof(TX_EXTRA_SMS_MAX_COUNT), hash.data);
       crypto::cn_fast_hash(&GYRO_DONATION_ADDR, sizeof(GYRO_DONATION_ADDR), hash.data);
@@ -419,6 +433,7 @@ namespace config
       crypto::cn_fast_hash(&DURATION_TARGET_LAG, sizeof(DURATION_TARGET_LAG), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT_BLOCKS, sizeof(START_AMOUNT_BLOCKS), hash.data);
       crypto::cn_fast_hash(&START_AMOUNT, sizeof(START_AMOUNT), hash.data);
+      crypto::cn_fast_hash(&SPINNER_AMOUNT_MIN_LOCK, sizeof(SPINNER_AMOUNT_MIN_LOCK), hash.data);
       crypto::cn_fast_hash(&SPINNER_MOMENT_OF_INERTIA, sizeof(SPINNER_MOMENT_OF_INERTIA), hash.data);
       crypto::cn_fast_hash(&SPINNER_DAMPING_RATIO_DIVIDER, sizeof(SPINNER_DAMPING_RATIO_DIVIDER), hash.data);
       crypto::cn_fast_hash(&SPINNER_ENERGY_COST_MULTIPLIER, sizeof(SPINNER_ENERGY_COST_MULTIPLIER), hash.data);
@@ -429,6 +444,7 @@ namespace config
       crypto::cn_fast_hash(&CRYPTONOTE_MEMPOOL_TX_LIVETIME, sizeof(CRYPTONOTE_MEMPOOL_TX_LIVETIME), hash.data);
       crypto::cn_fast_hash(&CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME, sizeof(CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME), hash.data);
       crypto::cn_fast_hash(&CRYPTONOTE_MESSAGE_TX_LIVETIME, sizeof(CRYPTONOTE_MESSAGE_TX_LIVETIME), hash.data);
+      crypto::cn_fast_hash(&CRYPTONOTE_MESSAGE_TX_AMOUNT, sizeof(CRYPTONOTE_MESSAGE_TX_AMOUNT), hash.data);
       crypto::cn_fast_hash(&CRYPTONOTE_DANDELIONPP_ENABLE, sizeof(CRYPTONOTE_DANDELIONPP_ENABLE), hash.data);
       crypto::cn_fast_hash(&TX_EXTRA_SMS_MAX_COUNT, sizeof(TX_EXTRA_SMS_MAX_COUNT), hash.data);
       crypto::cn_fast_hash(&GYRO_DONATION_ADDR, sizeof(GYRO_DONATION_ADDR), hash.data);

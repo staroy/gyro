@@ -108,6 +108,8 @@ extern uint64_t DURATION_TARGET_LAG;                    // 5  // seconds
 extern uint64_t CRYPTONOTE_MEMPOOL_TX_LIVETIME;                // (86400*3) //seconds, three days
 extern uint64_t CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME; // 604800 //seconds, one week
 extern uint64_t CRYPTONOTE_MESSAGE_TX_LIVETIME;                // 86400 //seconds, three days
+extern uint64_t CRYPTONOTE_MESSAGE_TX_AMOUNT;                  // COIN
+extern uint64_t TX_EXTRA_SMS_MAX_COUNT;      // 4096
 
 #define CRYPTONOTE_DANDELIONPP_STEMS              2 // number of outgoing stem connections per epoch
 #define CRYPTONOTE_DANDELIONPP_FLUFF_PROBABILITY 10 // out of 100
@@ -204,6 +206,7 @@ extern std::string CRYPTONOTE_NAME;
 extern uint64_t START_AMOUNT_BLOCKS;            // 100
 extern uint64_t START_AMOUNT;
 
+extern uint64_t SPINNER_AMOUNT_MIN_LOCK; //   COIN
 extern uint64_t SPINNER_MOMENT_OF_INERTIA; //   5
 extern uint64_t SPINNER_DAMPING_RATIO_DIVIDER; // 2000 (result in picoJoule)
 extern uint64_t SPINNER_ENERGY_COST_MULTIPLIER; //   100000  // 100000 picocoins of 1 picoJoule
@@ -211,7 +214,6 @@ extern uint64_t SPINNER_INTERVAL_DYNAMIC_FACTOR; //   5
 extern uint64_t SPINNER_PVRB_BLOCK_WINDOW; //   5 - publicly verifiable random beacon spinner block window
 extern uint64_t SPINNER_SPIN_BLOCK_WINDOW; //   100
 extern uint64_t SPINNER_COUNT_PRECISION; //   10
-
 
 extern uint64_t TX_EXTRA_SMS_MAX_COUNT;      // 4096
 

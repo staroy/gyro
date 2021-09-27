@@ -88,6 +88,8 @@ void generate_genesis_tx(const std::string& filepath)
   of << "EMISSION_SUBSIDY_PER_MINUTE=" << EMISSION_SUBSIDY_PER_MINUTE << "\n";
   of << "FINAL_SUBSIDY_PER_MINUTE=" << FINAL_SUBSIDY_PER_MINUTE << "\n";
   of << "START_AMOUNT=" << START_AMOUNT << "\n";
+  of << "START_AMOUNT_BLOCKS=" << START_AMOUNT_BLOCKS << "\n";
+  of << "SPINNER_AMOUNT_MIN_LOCK=" << SPINNER_AMOUNT_MIN_LOCK << "\n";
   of << "DURATION_TARGET=" << DURATION_TARGET << "\n";
   of << "SPINNER_MOMENT_OF_INERTIA=" << SPINNER_MOMENT_OF_INERTIA << "\n";
   of << "SPINNER_DAMPING_RATIO_DIVIDER=" << SPINNER_DAMPING_RATIO_DIVIDER << "\n";
@@ -102,6 +104,7 @@ void generate_genesis_tx(const std::string& filepath)
   of << "CRYPTONOTE_MEMPOOL_TX_LIVETIME=" << CRYPTONOTE_MEMPOOL_TX_LIVETIME << "\n";
   of << "CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME=" << CRYPTONOTE_MEMPOOL_TX_FROM_ALT_BLOCK_LIVETIME << "\n";
   of << "CRYPTONOTE_MESSAGE_TX_LIVETIME=" << CRYPTONOTE_MESSAGE_TX_LIVETIME << "\n";
+  of << "CRYPTONOTE_MESSAGE_TX_AMOUNT=" << CRYPTONOTE_MESSAGE_TX_AMOUNT << "\n";
   of << "CRYPTONOTE_DANDELIONPP_ENABLE=" << CRYPTONOTE_DANDELIONPP_ENABLE << "\n";
   of << "CRYPTONOTE_DANDELIONPP_ENABLE_OPT=" << CRYPTONOTE_DANDELIONPP_ENABLE_OPT << "\n";
   of << "TX_EXTRA_SMS_MAX_COUNT=" << TX_EXTRA_SMS_MAX_COUNT << "\n";
@@ -376,7 +379,7 @@ int main(int argc, char const * argv[])
         generate_genesis_tx_testnet(config_genesis_filepath);
       else if(stagenet)
         generate_genesis_tx_stagenet(config_genesis_filepath);
-      return false;
+      return 0;
     }
 
     // data_dir

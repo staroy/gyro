@@ -1918,11 +1918,11 @@ void wallet2::process_new_transaction(const crypto::hash &txid, const cryptonote
   if (!spinner_tx && !pool)
     process_unconfirmed(txid, tx, height);
 
-  tx_extra_sms em;
-  if(get_sms_from_extra(tx.extra, em))
-  {
-    MINFO("message txid: " << txid);
-  }
+  //tx_extra_sms em;
+  //if(get_sms_from_extra(tx.extra, em))
+  //{
+    //MINFO("message txid: " << txid);
+  //}
 
   // per receiving subaddress index
   std::unordered_map<cryptonote::subaddress_index, uint64_t> tx_money_got_in_outs;

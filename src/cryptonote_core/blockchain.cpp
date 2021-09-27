@@ -1338,7 +1338,13 @@ bool Blockchain::check_spinner_transaction_proof(const crypto::hash& txid, const
             return false;
           }
 
-      check_tx_key_helper(tx, derivation, additional_derivations, adr, spinner_locked);
+      if(!check_tx_key_helper(tx, derivation, additional_derivations, adr, spinner_locked) ||
+          spinner_locked < SPINNER_AMOUNT_MIN_LOCK)
+      {
+        MERROR_VER("Failed amount spinner lock");
+        return false;
+      }
+
       return true;
     }
     return false;
@@ -1505,7 +1511,8 @@ bool Blockchain::calc_spinner_transaction_locked(const spinner_info& nfo, uint64
   }
 
   locked = 0;
-  for(uint64_t a : amounts) locked += a;
+  for(uint64_t a : amounts)
+    locked += a;
 
   return true;
 }

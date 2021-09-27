@@ -6614,17 +6614,21 @@ bool simple_wallet::transfer_main(int transfer_type, const std::vector<std::stri
 
     if (transfer_type == SpinnerLock)
     {
-      if(local_args.size() == 4)
+      if(local_args.size() == 3)
       {
         cryptonote::spinner_tx_proof data;
         if (epee::string_tools::hex_to_pod(local_args[2], data.txid))
         {
-          std::vector<crypto::public_key> vkey;
-          std::vector<crypto::signature> vsig;
-          m_wallet->decode_tx_proof(local_args[3], vkey, vsig);
-          for(size_t n=0; n<vkey.size(); n++)
-            data.pairs.push_back({vkey[n],vsig[n]});
-          ::serialization::dump_binary(data, proof);
+          std::string proof_s = m_wallet->get_tx_proof(data.txid, de.addr, false, "");
+          if(!proof_s.empty())
+          {
+            std::vector<crypto::public_key> vkey;
+            std::vector<crypto::signature> vsig;
+            m_wallet->decode_tx_proof(proof_s, vkey, vsig);
+            for(size_t n=0; n<vkey.size(); n++)
+              data.pairs.push_back({vkey[n],vsig[n]});
+            ::serialization::dump_binary(data, proof);
+          }
         }
       }
       break;
@@ -7670,7 +7674,7 @@ bool simple_wallet::donate(const std::vector<std::string> &args_)
   if (!payment_id_str.empty())
     local_args.push_back(payment_id_str);
   if (m_wallet->nettype() == cryptonote::MAINNET)
-    message_writer() << (boost::format(tr("Donating %s %s to The Gyro Project (donate.getmonero.org or %s).")) % amount_str % cryptonote::get_unit(cryptonote::get_default_decimal_point()) % GYRO_DONATION_ADDR).str();
+    message_writer() << (boost::format(tr("Donating %s %s to The Gyro Project (staroy.github.io or %s).")) % amount_str % cryptonote::get_unit(cryptonote::get_default_decimal_point()) % GYRO_DONATION_ADDR).str();
   else
     message_writer() << (boost::format(tr("Donating %s %s to %s.")) % amount_str % cryptonote::get_unit(cryptonote::get_default_decimal_point()) % address_str).str();
   transfer(local_args);

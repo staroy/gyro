@@ -123,11 +123,11 @@ namespace cryptonote
   //---------------------------------------------------------------------------------
   bool tx_memory_pool::add_tx(transaction &tx, /*const crypto::hash& tx_prefix_hash,*/ const crypto::hash &id, const cryptonote::blobdata &blob, size_t tx_weight, tx_verification_context& tvc, relay_method tx_relay, bool relayed, uint8_t version)
   {
-    tx_extra_sms em;
-    if(get_sms_from_extra(tx.extra, em))
-    {
-      MINFO("message txid: " << id);
-    }
+    //tx_extra_sms em;
+    //if(get_sms_from_extra(tx.extra, em))
+    //{
+    //  MINFO("message txid: " << id);
+    //}
 
     const bool kept_by_block = (tx_relay == relay_method::block);
 
