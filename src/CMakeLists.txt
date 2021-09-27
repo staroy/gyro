@@ -148,8 +148,3 @@ endif()
 
 add_subdirectory(device)
 add_subdirectory(device_trezor)
-
-install(FILES
-  gyro.conf
-  DESTINATION var/lib/gyro
-)
