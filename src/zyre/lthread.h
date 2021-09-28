@@ -6,8 +6,7 @@
 #include "ldb.h"
 #include "timeout.h"
 
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/io_context_strand.hpp>
+#include <boost/asio.hpp>
 
 #include <iostream>
 #include <thread>

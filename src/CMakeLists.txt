@@ -28,6 +28,10 @@
 #
 # Parts of this file are originally copyright (c) 2012-2013 The Cryptonote developers
 
+include_directories(
+  ${CMAKE_INSTALL_PREFIX}/include
+)
+
 if (WIN32 OR STATIC)
   add_definitions(-DSTATICLIB)
   # miniupnp changed their static define

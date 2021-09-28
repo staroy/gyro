@@ -7,8 +7,7 @@
 #include <mutex>
 #include <thread>
 
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/io_service_strand.hpp>
+#include <boost/asio.hpp>
 
 #include "azmq/socket.hpp"
 

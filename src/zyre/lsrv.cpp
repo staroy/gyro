@@ -12,10 +12,7 @@
 #include <thread>
 
 #include <boost/program_options.hpp>
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/io_context_strand.hpp>
-#include <boost/asio/signal_set.hpp>
-#include <boost/asio/deadline_timer.hpp>
+#include <boost/asio.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include "misc_log_ex.h"
