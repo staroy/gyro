@@ -12030,7 +12030,7 @@ uint64_t wallet2::get_daemon_blockchain_target_height(string &err)
 
 uint64_t wallet2::get_approximate_blockchain_height() const
 {
-  // time of v2 fork
+/*  // time of v2 fork
   const time_t fork_time = m_nettype == TESTNET ? 1448285909 : m_nettype == STAGENET ? 1520937818 : 1458748658;
   // v2 fork block
   const uint64_t fork_block = m_nettype == TESTNET ? 624634 : m_nettype == STAGENET ? 32000 : 1009827;
@@ -12043,7 +12043,8 @@ uint64_t wallet2::get_approximate_blockchain_height() const
   if (m_nettype == TESTNET && approx_blockchain_height > approximate_testnet_rolled_back_blocks)
     approx_blockchain_height -= approximate_testnet_rolled_back_blocks;
   LOG_PRINT_L2("Calculated blockchain height: " << approx_blockchain_height);
-  return approx_blockchain_height;
+  return approx_blockchain_height;*/
+  return 0;
 }
 
 void wallet2::set_tx_note(const crypto::hash &txid, const std::string &note)
