@@ -365,7 +365,7 @@ namespace cryptonote
      *
      * @return false if anything is found wrong with the spinner transaction, otherwise true
      */
-    bool get_spinner_data(const spinner_info& info, std::vector<uint64_t>& history, spinner_data& data, uint64_t& time_to);
+    bool get_spinner_data(const spinner_info& info, spinner_data& data, uint64_t& time_to);
 
 
     /**

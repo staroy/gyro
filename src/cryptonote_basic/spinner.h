@@ -49,7 +49,7 @@ namespace cryptonote
   {
     virtual bool handle_block_found(block& b, block_verification_context &bvc) = 0;
     virtual bool get_block_template(block& b, const account_public_address& reward_adr, const keypair& spin_key, const spinner_data& spin_data, gyro_type& gyr, uint64_t& height, uint64_t& expected_reward, const blobdata& ex_nonce) = 0;
-    virtual bool get_spinner_data(const spinner_info& info, std::vector<uint64_t>& history, spinner_data& data, uint64_t& time_to) = 0;
+    virtual bool get_spinner_data(const spinner_info& info, spinner_data& data, uint64_t& time_to) = 0;
   protected:
     ~i_spinner_handler(){};
   };

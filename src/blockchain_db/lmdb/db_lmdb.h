@@ -51,6 +51,8 @@ typedef struct mdb_txn_cursors
   MDB_cursor *m_txc_block_heights;
   MDB_cursor *m_txc_block_info;
 
+  MDB_cursor *m_txc_spinner_heights;
+
   MDB_cursor *m_txc_output_txs;
   MDB_cursor *m_txc_output_amounts;
 
@@ -77,6 +79,7 @@ typedef struct mdb_txn_cursors
 #define m_cur_blocks	m_cursors->m_txc_blocks
 #define m_cur_block_heights	m_cursors->m_txc_block_heights
 #define m_cur_block_info	m_cursors->m_txc_block_info
+#define m_cur_spinner_heights	m_cursors->m_txc_spinner_heights
 #define m_cur_output_txs	m_cursors->m_txc_output_txs
 #define m_cur_output_amounts	m_cursors->m_txc_output_amounts
 #define m_cur_txs	m_cursors->m_txc_txs
@@ -99,6 +102,7 @@ typedef struct mdb_rflags
   bool m_rf_blocks;
   bool m_rf_block_heights;
   bool m_rf_block_info;
+  bool m_rf_spinner_heights;
   bool m_rf_output_txs;
   bool m_rf_output_amounts;
   bool m_rf_txs;
@@ -209,6 +213,8 @@ public:
 
   virtual uint64_t get_block_height(const crypto::hash& h) const;
 
+  virtual uint64_t get_spinner_height(const crypto::public_key& spin) const;
+
   virtual block_header get_block_header(const crypto::hash& h) const;
 
   virtual cryptonote::blobdata get_block_blob(const crypto::hash& h) const;
@@ -314,6 +320,8 @@ public:
                             , uint64_t long_term_block_weight
                             , const gyro_type& cumulative_gyro
                             , const uint64_t& coins_generated
+                            , const crypto::public_key& spin_public_key
+                            , uint64_t spin_prevuos_height
                             , const std::vector<std::pair<transaction, blobdata>>& txs
                             );
 
@@ -367,6 +375,8 @@ private:
                 , uint64_t long_term_block_weight
                 , const gyro_type& cumulative_gyro
                 , const uint64_t& coins_generated
+                , const crypto::public_key& spin_public_key
+                , uint64_t spin_prevuos_height
                 , uint64_t num_rct_outs
                 , const crypto::hash& block_hash
                 );
@@ -448,6 +458,8 @@ private:
   MDB_dbi m_blocks;
   MDB_dbi m_block_heights;
   MDB_dbi m_block_info;
+
+  MDB_dbi m_spinner_heights;
 
   MDB_dbi m_txs;
   MDB_dbi m_txs_pruned;

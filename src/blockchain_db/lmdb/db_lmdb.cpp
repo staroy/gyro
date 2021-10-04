@@ -187,6 +187,8 @@ namespace
  * block_heights    block hash   block height
  * block_info       block ID     {block metadata}
  *
+ * spinner_heights  address      spinner height
+ *
  * txs_pruned       txn ID       pruned txn blob
  * txs_prunable     txn ID       prunable txn blob
  * txs_prunable_hash txn ID      prunable txn hash
@@ -215,6 +217,8 @@ namespace
 const char* const LMDB_BLOCKS = "blocks";
 const char* const LMDB_BLOCK_HEIGHTS = "block_heights";
 const char* const LMDB_BLOCK_INFO = "block_info";
+
+const char* const LMDB_SPINNER_HEIGHTS = "spinner_heights";
 
 const char* const LMDB_TXS = "txs";
 const char* const LMDB_TXS_PRUNED = "txs_pruned";
@@ -321,6 +325,8 @@ typedef struct mdb_block_info_4
   uint64_t bi_weight; // a size_t really but we need 32-bit compat
   gyro_raw_type bi_gyro;
   crypto::hash bi_hash;
+  crypto::public_key bi_spin_public_key;
+  uint64_t bi_spin_prevuos_height;
   uint64_t bi_cum_rct;
   uint64_t bi_long_term_block_weight;
 } mdb_block_info_4;
@@ -331,6 +337,11 @@ typedef struct blk_height {
     crypto::hash bh_hash;
     uint64_t bh_height;
 } blk_height;
+
+typedef struct spin_height {
+    crypto::public_key spin_pk;
+    uint64_t spin_height;
+} spin_height;
 
 typedef struct pre_rct_outkey {
     uint64_t amount_index;
@@ -733,8 +744,15 @@ estim:
   return threshold_size;
 }
 
-void BlockchainLMDB::add_block(const block& blk, size_t block_weight, uint64_t long_term_block_weight, const gyro_type& cumulative_gyro, const uint64_t& coins_generated,
-    uint64_t num_rct_outs, const crypto::hash& blk_hash)
+void BlockchainLMDB::add_block( const block& blk
+                                , size_t block_weight
+                                , uint64_t long_term_block_weight
+                                , const gyro_type& cumulative_gyro
+                                , const uint64_t& coins_generated
+                                , const crypto::public_key& spin_public_key
+                                , uint64_t spin_prevuos_height
+                                , uint64_t num_rct_outs
+                                , const crypto::hash& blk_hash)
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
   check_open();
@@ -782,6 +800,8 @@ void BlockchainLMDB::add_block(const block& blk, size_t block_weight, uint64_t l
   bi.bi_coins = coins_generated;
   bi.bi_weight = block_weight;
   cumulative_gyro.to_raw(bi.bi_gyro);
+  bi.bi_spin_public_key = spin_public_key;
+  bi.bi_spin_prevuos_height = spin_prevuos_height;
   bi.bi_hash = blk_hash;
   bi.bi_cum_rct = num_rct_outs;
   if (blk.major_version >= 4)
@@ -803,6 +823,13 @@ void BlockchainLMDB::add_block(const block& blk, size_t block_weight, uint64_t l
   result = mdb_cursor_put(m_cur_block_heights, (MDB_val *)&zerokval, &val_h, 0);
   if (result)
     throw0(DB_ERROR(lmdb_error("Failed to add block height by hash to db transaction: ", result).c_str()));
+
+  CURSOR(spinner_heights)
+  spin_height sh = {spin_public_key, m_height};
+  MDB_val_set(spin_h, sh);
+  result = mdb_cursor_put(m_cur_spinner_heights, (MDB_val *)&zerokval, &spin_h, 0);
+  if (result)
+    throw0(DB_ERROR(lmdb_error("Failed to set spinner height to db transaction: ", result).c_str()));
 
   // we use weight as a proxy for size, since we don't have size but weight is >= size
   // and often actually equal
@@ -845,6 +872,13 @@ void BlockchainLMDB::remove_block()
 
   if ((result = mdb_cursor_del(m_cur_block_info, 0)))
       throw1(DB_ERROR(lmdb_error("Failed to add removal of block info to db transaction: ", result).c_str()));
+
+  CURSOR(spinner_heights)
+  spin_height sh = {bi->bi_spin_public_key, bi->bi_spin_prevuos_height};
+  MDB_val_set(spin_h, sh);
+  result = mdb_cursor_put(m_cur_spinner_heights, (MDB_val *)&zerokval, &spin_h, 0);
+  if (result)
+    throw0(DB_ERROR(lmdb_error("Failed to set spinner height to db transaction: ", result).c_str()));
 }
 
 uint64_t BlockchainLMDB::add_transaction_data(const crypto::hash& blk_hash, const std::pair<transaction, blobdata>& txp, const crypto::hash& tx_hash, const crypto::hash& tx_prunable_hash)
@@ -1393,6 +1427,8 @@ void BlockchainLMDB::open(const std::string& filename, const int db_flags)
   lmdb_db_open(txn, LMDB_BLOCK_INFO, MDB_INTEGERKEY | MDB_CREATE | MDB_DUPSORT | MDB_DUPFIXED, m_block_info, "Failed to open db handle for m_block_info");
   lmdb_db_open(txn, LMDB_BLOCK_HEIGHTS, MDB_INTEGERKEY | MDB_CREATE | MDB_DUPSORT | MDB_DUPFIXED, m_block_heights, "Failed to open db handle for m_block_heights");
 
+  lmdb_db_open(txn, LMDB_SPINNER_HEIGHTS, MDB_INTEGERKEY | MDB_CREATE | MDB_DUPSORT | MDB_DUPFIXED, m_spinner_heights, "Failed to open db handle for m_spinner_heights");
+
   lmdb_db_open(txn, LMDB_TXS, MDB_INTEGERKEY | MDB_CREATE, m_txs, "Failed to open db handle for m_txs");
   lmdb_db_open(txn, LMDB_TXS_PRUNED, MDB_INTEGERKEY | MDB_CREATE, m_txs_pruned, "Failed to open db handle for m_txs_pruned");
   lmdb_db_open(txn, LMDB_TXS_PRUNABLE, MDB_INTEGERKEY | MDB_CREATE, m_txs_prunable, "Failed to open db handle for m_txs_prunable");
@@ -1424,6 +1460,7 @@ void BlockchainLMDB::open(const std::string& filename, const int db_flags)
 
   mdb_set_dupsort(txn, m_spent_keys, compare_hash32);
   mdb_set_dupsort(txn, m_block_heights, compare_hash32);
+  mdb_set_dupsort(txn, m_spinner_heights, compare_hash32);
   mdb_set_dupsort(txn, m_tx_indices, compare_hash32);
   mdb_set_dupsort(txn, m_output_amounts, compare_uint64);
   mdb_set_dupsort(txn, m_output_txs, compare_uint64);
@@ -1585,6 +1622,8 @@ void BlockchainLMDB::reset()
     throw0(DB_ERROR(lmdb_error("Failed to drop m_block_info: ", result).c_str()));
   if (auto result = mdb_drop(txn, m_block_heights, 0))
     throw0(DB_ERROR(lmdb_error("Failed to drop m_block_heights: ", result).c_str()));
+  if (auto result = mdb_drop(txn, m_spinner_heights, 0))
+    throw0(DB_ERROR(lmdb_error("Failed to drop m_spinner_heights: ", result).c_str()));
   if (auto result = mdb_drop(txn, m_txs_pruned, 0))
     throw0(DB_ERROR(lmdb_error("Failed to drop m_txs_pruned: ", result).c_str()));
   if (auto result = mdb_drop(txn, m_txs_prunable, 0))
@@ -2401,6 +2440,29 @@ bool BlockchainLMDB::block_exists(const crypto::hash& h, uint64_t *height) const
 
   TXN_POSTFIX_RDONLY();
   return ret;
+}
+
+uint64_t BlockchainLMDB::get_spinner_height(const crypto::public_key& spin) const
+{
+  LOG_PRINT_L3("BlockchainLMDB::" << __func__);
+  check_open();
+
+  TXN_PREFIX_RDONLY();
+  RCURSOR(spinner_heights);
+
+  MDB_val_set(key, spin);
+  auto get_result = mdb_cursor_get(m_cur_spinner_heights, (MDB_val *)&zerokval, &key, MDB_GET_BOTH);
+
+  if(get_result == MDB_NOTFOUND)
+    return 0;
+
+  if(get_result)
+    throw0(DB_ERROR(lmdb_error("DB error attempting to fetch block index from spinner", get_result).c_str()));
+
+  const spin_height *bhp = (const spin_height *)key.mv_data;
+
+  TXN_POSTFIX_RDONLY();
+  return bhp->spin_height;
 }
 
 cryptonote::blobdata BlockchainLMDB::get_block_blob(const crypto::hash& h) const
@@ -3966,7 +4028,14 @@ void BlockchainLMDB::block_rtxn_abort() const
   memset(&m_tinfo->m_ti_rflags, 0, sizeof(m_tinfo->m_ti_rflags));
 }
 
-uint64_t BlockchainLMDB::add_block(const std::pair<block, blobdata>& blk, size_t block_weight, uint64_t long_term_block_weight, const gyro_type& cumulative_gyro, const uint64_t& coins_generated,
+uint64_t BlockchainLMDB::add_block(
+    const std::pair<block, blobdata>& blk,
+    size_t block_weight,
+    uint64_t long_term_block_weight,
+    const gyro_type& cumulative_gyro,
+    const uint64_t& coins_generated,
+    const crypto::public_key& spin_public_key,
+    uint64_t spin_prevuos_height,
     const std::vector<std::pair<transaction, blobdata>>& txs)
 {
   LOG_PRINT_L3("BlockchainLMDB::" << __func__);
@@ -3985,7 +4054,7 @@ uint64_t BlockchainLMDB::add_block(const std::pair<block, blobdata>& blk, size_t
 
   try
   {
-    BlockchainDB::add_block(blk, block_weight, long_term_block_weight, cumulative_gyro, coins_generated, txs);
+    BlockchainDB::add_block(blk, block_weight, long_term_block_weight, cumulative_gyro, coins_generated, spin_public_key, spin_prevuos_height, txs);
   }
   catch (const DB_ERROR_TXN_START& e)
   {

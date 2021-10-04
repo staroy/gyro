@@ -1647,8 +1647,7 @@ namespace cryptonote
     b = boost::value_initialized<cryptonote::block>();
     spinner_info spin_info; spinner_data spin_data; uint64_t interval;
     ::serialization::parse_binary(spin_data_raw, spin_data);
-    std::vector<uint64_t> history;
-    if(!m_core.get_spinner_data(spin_info, history, spin_data, interval))
+    if(!m_core.get_spinner_data(spin_info, spin_data, interval))
     {
       error_resp.code = CORE_RPC_ERROR_CODE_INTERNAL_ERROR;
       error_resp.message = "Internal error: failed get spinner data";

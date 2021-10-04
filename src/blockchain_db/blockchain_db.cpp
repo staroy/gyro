@@ -239,6 +239,8 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
                                 , uint64_t long_term_block_weight
                                 , const gyro_type& cumulative_gyro
                                 , const uint64_t& coins_generated
+                                , const crypto::public_key& spin_public_key
+                                , uint64_t spin_prevuos_height
                                 , const std::vector<std::pair<transaction, blobdata>>& txs
                                 )
 {
@@ -281,7 +283,7 @@ uint64_t BlockchainDB::add_block( const std::pair<block, blobdata>& blck
 
   // call out to subclass implementation to add the block & metadata
   time1 = epee::misc_utils::get_tick_count();
-  add_block(blk, block_weight, long_term_block_weight, cumulative_gyro, coins_generated, num_rct_outs, blk_hash);
+  add_block(blk, block_weight, long_term_block_weight, cumulative_gyro, coins_generated, spin_public_key, spin_prevuos_height, num_rct_outs, blk_hash);
   TIME_MEASURE_FINISH(time1);
   time_add_block1 += time1;
 

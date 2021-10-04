@@ -403,6 +403,8 @@ private:
                 , uint64_t long_term_block_weight
                 , const gyro_type& cumulative_gyro
                 , const uint64_t& coins_generated
+                , const crypto::public_key& spin_public_key
+                , uint64_t spin_prevuos_height
                 , uint64_t num_rct_outs
                 , const crypto::hash& blk_hash
                 ) = 0;
@@ -856,6 +858,8 @@ public:
                             , uint64_t long_term_block_weight
                             , const gyro_type& cumulative_gyro
                             , const uint64_t& coins_generated
+                            , const crypto::public_key& spin_public_key
+                            , uint64_t spin_prevuos_height
                             , const std::vector<std::pair<transaction, blobdata>>& txs
                             );
 
@@ -907,6 +911,19 @@ public:
    * @return the height
    */
   virtual uint64_t get_block_height(const crypto::hash& h) const = 0;
+
+  /**
+   * @brief gets the height of the spinner with a given view public key
+   *
+   * The subclass should return the requested height.
+   *
+   * If the block does not exist, the subclass should throw BLOCK_DNE
+   *
+   * @param h the hash to look for
+   *
+   * @return the height
+   */
+  virtual uint64_t get_spinner_height(const crypto::public_key& spin) const = 0;
 
   /**
    * @brief fetch a block header

@@ -645,14 +645,12 @@ namespace cryptonote
     slow_hash_allocate_state();
     spinner_info spinner_info = m_spinner_info;
     spinner_data spinner_data = AUTO_VAL_INIT(spinner_data);
-    std::vector<uint64_t> spinner_history;
-    spinner_history.push_back(m_spinner_info.prevuos_height);
     uint64_t next_tm = time(nullptr);
     if(m_height > START_AMOUNT_BLOCKS)
     {
       while(!m_stop)
       {
-        if(m_phandler->get_spinner_data(spinner_info, spinner_history, spinner_data, next_tm))
+        if(m_phandler->get_spinner_data(spinner_info, spinner_data, next_tm))
           break;
         misc_utils::sleep_no_w(100);
       }
@@ -695,7 +693,7 @@ namespace cryptonote
 
       if(m_height > START_AMOUNT_BLOCKS)
       {
-        if(!m_phandler->get_spinner_data(spinner_info, spinner_history, spinner_data, next_tm))
+        if(!m_phandler->get_spinner_data(spinner_info, spinner_data, next_tm))
         {
           uint64_t now = uint64_t(time(nullptr));
           if(next_tm >= now && (next_tm - now) > 2)
@@ -734,7 +732,6 @@ namespace cryptonote
         if (!m_config_folder_path.empty())
           epee::serialization::store_t_to_json_file(m_config, m_config_folder_path + "/" + SPINNER_CONFIG_FILE_NAME);
         spinner_info.prevuos_height = height;
-        spinner_history.push_back(height);
       }
       else
       {

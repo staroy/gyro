@@ -236,7 +236,7 @@ namespace cryptonote
       *
       * @note see Blockchain::get_spinner_data
       */
-     virtual bool get_spinner_data(const spinner_info& info, std::vector<uint64_t>& history, spinner_data& data, uint64_t& time_to);
+     virtual bool get_spinner_data(const spinner_info& info, spinner_data& data, uint64_t& time_to);
 
      /**
       * @brief called when a transaction is relayed.

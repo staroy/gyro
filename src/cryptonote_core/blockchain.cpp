@@ -1517,7 +1517,7 @@ bool Blockchain::calc_spinner_transaction_locked(const spinner_info& nfo, uint64
   return true;
 }
 //------------------------------------------------------------------
-bool Blockchain::get_spinner_data(const spinner_info& info, std::vector<uint64_t>& history, spinner_data& res, uint64_t& time_to)
+bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, uint64_t& time_to)
 {
   uint64_t height = m_db->height() - 1;
   if(height < START_AMOUNT_BLOCKS)
@@ -1536,7 +1536,9 @@ bool Blockchain::get_spinner_data(const spinner_info& info, std::vector<uint64_t
   uint64_t spin_timestamp = 0;
   uint64_t prev_timestamp = 0;
   uint64_t medium_interval = DURATION_TARGET;
-  uint64_t prevuos_height = history.size() > 0 ? history.back() : info.prevuos_height;
+  uint64_t prevuos_height = m_db->get_spinner_height(info.adr.m_view_public_key);
+  if(prevuos_height == 0)
+      prevuos_height = info.prevuos_height;
 
   if(height > START_AMOUNT_BLOCKS)
   {
@@ -1560,8 +1562,6 @@ bool Blockchain::get_spinner_data(const spinner_info& info, std::vector<uint64_t
 
   if(prevuos_height > START_AMOUNT_BLOCKS)
   {
-    bool history_popback = false;
-
     for(;;)
     {
       block b = m_db->get_block_from_height(prevuos_height);
@@ -1583,18 +1583,6 @@ bool Blockchain::get_spinner_data(const spinner_info& info, std::vector<uint64_t
         spin_timestamp =  b.timestamp;
         break;
       }
-
-      if(history.size() > 0)
-      {
-        history.pop_back();
-        prevuos_height = history.back();
-        history_popback = true;
-      }
-      else
-      {
-        MERROR_VER("Error get prevuos spinner data");
-        return false;
-      }
     }
 
     if(prev_spin.nfo.prevuos_height > START_AMOUNT_BLOCKS)
@@ -1615,10 +1603,7 @@ bool Blockchain::get_spinner_data(const spinner_info& info, std::vector<uint64_t
       return false;
     }
 
-    if(history_popback)
-      time_to = now + 2;
-    else
-      time_to = spin_timestamp + prev_spin.interval;
+    time_to = spin_timestamp + prev_spin.interval;
   }
   else
   {
@@ -4745,8 +4730,7 @@ leave:
 
     uint64_t time_to;
     spinner_data calc = AUTO_VAL_INIT(calc);
-    std::vector<uint64_t> hist;
-    if(!get_spinner_data(data.nfo, hist, calc, time_to))
+    if(!get_spinner_data(data.nfo, calc, time_to))
     {
       MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.");
       bvc.m_verifivation_failed = true;
@@ -4795,7 +4779,7 @@ leave:
     {
       uint64_t long_term_block_weight = get_next_long_term_block_weight(block_weight);
       cryptonote::blobdata bd = cryptonote::block_to_blob(bl);
-      new_height = m_db->add_block(std::make_pair(std::move(bl), std::move(bd)), block_weight, long_term_block_weight, cumulative_gyro, already_generated_coins, txs);
+      new_height = m_db->add_block(std::make_pair(std::move(bl), std::move(bd)), block_weight, long_term_block_weight, cumulative_gyro, already_generated_coins, data.nfo.adr.m_view_public_key, data.nfo.prevuos_height, txs);
     }
     catch (const KEY_IMAGE_EXISTS& e)
     {

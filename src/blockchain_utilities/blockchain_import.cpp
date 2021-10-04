@@ -477,11 +477,20 @@ int import_from_file(cryptonote::core& core, const std::string& import_file_path
           block_weight = bp.block_weight;
           cumulative_gyro = bp.cumulative_gyro;
           coins_generated = bp.coins_generated;
-
+          spinner_data sd;
+          tx_extra_spin_data ex;
+          if(get_spin_data_from_extra(bp.block.spinner_tx.extra, ex))
+          {
+            if(!::serialization::parse_binary(ex.data, sd))
+            {
+              MFATAL("Error parse spinner data");
+              break;
+            }
+          }
           try
           {
             uint64_t long_term_block_weight = core.get_blockchain_storage().get_next_long_term_block_weight(block_weight);
-            core.get_blockchain_storage().get_db().add_block(std::make_pair(b, block_to_blob(b)), block_weight, long_term_block_weight, cumulative_gyro, coins_generated, txs);
+            core.get_blockchain_storage().get_db().add_block(std::make_pair(b, block_to_blob(b)), block_weight, long_term_block_weight, cumulative_gyro, coins_generated, sd.nfo.adr.m_view_public_key, sd.nfo.prevuos_height, txs);
           }
           catch (const std::exception& e)
           {
