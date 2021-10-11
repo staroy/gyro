@@ -1504,7 +1504,7 @@ bool Blockchain::calc_spinner_transaction_locked(const spinner_info& nfo, uint64
       return false;
     }
 
-    amounts.push_back(amount);
+    amounts.push_back(amount - SPINNER_AMOUNT_MIN_LOCK);
 
     ex_proof.data.clear();
     r = get_spin_tx_proof_from_extra(tx.extra, ex_proof);
@@ -1635,6 +1635,14 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
     return false;
   }
 
+  uint64_t res_data_locked = res_data.locked;
+
+  uint64_t bound_height = m_db->get_tx_block_height(info.proof.txid)
+    + SPINNER_SPIN_BLOCK_WINDOW * (prev_data.medium_spin + 1) / (prev_spin.spin + 1);
+
+  if(height > bound_height)
+    res_data_locked = SPINNER_AMOUNT_MIN_LOCK;
+
   res_data.nfo = info;
   res_data.nfo.prevuos_height = prevuos_height;
 
@@ -1642,9 +1650,10 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
   boost::multiprecision::uint128_t picoX = 1000000000000;
   boost::multiprecision::uint128_t prev_spin_pow2 = boost::multiprecision::uint128_t(prev_spin.spin) * prev_spin.spin;
   boost::multiprecision::uint128_t E = picoX * SPINNER_MOMENT_OF_INERTIA * prev_spin_pow2 / 2;
-  boost::multiprecision::uint128_t dE = res_data.locked * SPINNER_ENERGY_COST_MULTIPLIER;
+  boost::multiprecision::uint128_t dE = res_data_locked * SPINNER_ENERGY_COST_MULTIPLIER;
   boost::multiprecision::uint128_t sumE = E + dE;
-  boost::multiprecision::uint128_t dampA = picoX * prev_spin_pow2 * (prev_timestamp - spin_timestamp + DURATION_TARGET) / SPINNER_DAMPING_RATIO_DIVIDER;
+  boost::multiprecision::uint128_t dampA = picoX * prev_spin_pow2
+          * (prev_timestamp - spin_timestamp + DURATION_TARGET) / SPINNER_DAMPING_RATIO_DIVIDER;
 
   //MWARNING("prev_spin:" << prev_spin.spin);
 
@@ -1661,10 +1670,10 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
 
   if(prev_data.medium_locked > 0)
     res_data.medium_locked = ((boost::multiprecision::uint128_t(prev_data.medium_locked) * prev_data.approximately_count
-      + res_data.locked * SPINNER_COUNT_PRECISION)
+      + res_data_locked * SPINNER_COUNT_PRECISION)
       / (prev_data.approximately_count + SPINNER_COUNT_PRECISION)).convert_to<uint64_t>();
   else
-    res_data.medium_locked = res_data.locked;
+    res_data.medium_locked = res_data_locked;
 
   
   if(prev_data.medium_spin > 0)
@@ -1694,11 +1703,13 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
 
   uint64_t duration_target = DURATION_TARGET;
 
+  /*
   uint64_t bound_height = m_db->get_tx_block_height(info.proof.txid)
     + (SPINNER_SPIN_BLOCK_WINDOW * res_data.medium_spin / res_data.spin);
 
   if(height > bound_height)
     duration_target = (boost::multiprecision::uint128_t(DURATION_TARGET) * (height - bound_height + SPINNER_SPIN_BLOCK_WINDOW) / SPINNER_SPIN_BLOCK_WINDOW).convert_to<uint64_t>();
+  */
 
   res_data.interval =
 
@@ -1708,7 +1719,7 @@ bool Blockchain::get_spinner_data(const spinner_info& info, spinner_data& res, u
           boost::multiprecision::uint128_t(res_data.approximately_count + 1)
                       * duration_target
   
-          * res_data.medium_spin / res_data.spin
+          * (res_data.medium_spin + 1) / (res_data.spin + 1)
         )
         * duration_target / res_data.medium_interval
       )
@@ -2436,7 +2447,7 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     spinner_data data = AUTO_VAL_INIT(data);
     if(!get_spinner_data(b.spinner_tx.extra, data))
     {
-      MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.");
+      MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.[1]");
       bvc.m_verifivation_failed = true;
       return false;
     }
@@ -2461,7 +2472,7 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
     spinner_data main_chain_data = AUTO_VAL_INIT(main_chain_data);
     if(!get_spinner_data(main_chain_block.spinner_tx.extra, main_chain_data))
     {
-      MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.");
+      MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.[2]");
       bvc.m_verifivation_failed = true;
       return false;
     }
@@ -2483,7 +2494,7 @@ bool Blockchain::handle_alternative_block(const block& b, const crypto::hash& id
       spinner_data main_prev_data = AUTO_VAL_INIT(main_prev_data);
       if(!get_spinner_data(main_prev_block.spinner_tx.extra, main_prev_data))
       {
-        MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.");
+        MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.[3]");
         bvc.m_verifivation_failed = true;
         return false;
       }
@@ -4732,18 +4743,18 @@ leave:
     spinner_data calc = AUTO_VAL_INIT(calc);
     if(!get_spinner_data(data.nfo, calc, time_to))
     {
-      MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.");
+      MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.[4]");
       bvc.m_verifivation_failed = true;
       return false;
     }
 
-    if( data.locked             != calc.locked          ||
-        data.spin               != calc.spin            ||
-        data.medium_spin        != calc.medium_spin     ||
-        data.interval           != calc.interval        ||
+    if( data.locked             != calc.locked              ||
+        data.spin               != calc.spin                ||
+        data.medium_spin        != calc.medium_spin         ||
+        data.interval           != calc.interval            ||
         data.medium_interval    != calc.medium_interval)
     {
-      MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.");
+      MERROR_VER("Block with id: " << epee::string_tools::pod_to_hex(id) << " (as alternative) has incorrect spinner transaction spinner data.[5]");
       bvc.m_verifivation_failed = true;
       goto leave;
     }
